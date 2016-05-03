@@ -4,9 +4,8 @@
 and **[Photon Unity Networking]**.
 
 I was working on a multiplayer game and found myself in trouble trying to handle events from 
-Unity and Photon at the same time; ending up with very confused and fragile code - so I worked to 
-streamline and simplify the scenario (for my case) and build a library 
-that I can reuse.
+Unity and Photon at the same time; ending up with fragile code - so I worked to 
+streamline and simplify the scenario and build a reusable library.
 
 Out of the box, **JUMP** Provides:
 - A simple flow for connecting to the server, matchmaking and starting a multiplayer game
@@ -17,7 +16,7 @@ Out of the box, **JUMP** Provides:
 - Full source code access and great customization.
 
 #### Version
-0.1 [04/20/2016]
+0.1 [04/30/2016]
 
 #### Table of Content
 * **[How To Install](#how-to-install)**
@@ -42,21 +41,18 @@ For more information about configuring PUN, see [PUN Setup](https://doc.photonen
 > Note: JUMP was tested with Unity version 5.3.4 and Photon PUN Free version 1.67
 
 #### Option 1: Unity Asset Store
-Download JUMP from the [Unity Asset Store][JUMPAsset].
+The [Unity Asset Store][JUMPAsset] package includes the [DiceRoller](#diceroller-sample) sample project.
 
-#### Option 2: From the source code
-In alternative to use the Asset store, you can create a folder in the unity project (under Assets) and copy all the files from the `JUMP Multiplayer\` folder.
-
-#### Verify installation
-To test that JUMP works:
-
+* Download **JUMP** from the [Unity Asset Store][JUMPAsset].
 * Add all the scenes in the `DiceRollerSample/` to the Unity build
-* Oopen the `DiceRollerConnection` scene and start Unity.
-
-The DiceRoller sample should go to the Matchmake scene in connected mode.
+* Open the `DiceRollerConnection` scene and start Unity.
+* The DiceRoller sample should go to the Matchmake scene in connected mode.
 
 > Note: To test multiplayer games in Unity, you will need to run two copies of the game, so that they can connect to each other. The best way, is to build a copy of the game (File/Build & Run) for one player and start Unity debugging for the second player. See this Unity [forum post](http://answers.unity3d.com/questions/214802/how-to-test-your-multiplayer-game.html) for more details.
  
+#### Option 2: From GitHub source code
+In alternative to use the Asset store, you can create a folder in the unity project (under Assets) and copy all the files from the `JUMP Multiplayer\` folder.
+Then you can use the [Object Model](#object-model) and the prefabs.
 
 # Scenario
 The scenario supported by JUMP is very simple and designed with mobile multiplayer games in mind:
