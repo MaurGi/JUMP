@@ -80,7 +80,7 @@ JUMP supports up to five different Unity scenes:
 
 *Note:* support for multiple levels can be added to the Playing the game scene. 
 
-![](./Doc/UIFlow.png)
+![](https://raw.githubusercontent.com/MaurGi/JUMP/master/Doc/UIFlow.png)
 
 #### Custom Server
 JUMP cannot provide a dedicated remote server using [Photon Unity Networking] or [Photon Cloud], so it uses the **Host** model, where one of the clients also hosts the Game Server (sometimes called **Local Server**) 
@@ -94,7 +94,7 @@ JUMP supports the concept of an Authoritative or Semi-Authoritative server using
 
 The model is similar to the one explained by [Fast Paced Multiplayer] [Gambetta], but we use the term **Command** instead of Actions and **Snapshot** instad of New State
 
-![](./Doc/ClientServer.png)
+![](https://raw.githubusercontent.com/MaurGi/JUMP/master/Doc/ClientServer.png)
 
 > The slanted lines indicate that there is lag between the client and server communication, see [Fighting Latency on Call of Duty III] [CallOfDuty]
 
@@ -147,7 +147,7 @@ public enum Stages
 
 At high level the `Stages` state diagram is the following:
 
-![](./Doc/StateDiagram.png)
+![](https://raw.githubusercontent.com/MaurGi/JUMP/master/Doc/StateDiagram.png)
 
 In more detail, based on the current stage, `JUMPMultiplayer` provides the following events and operations:
 ##### `Stages.Connection`
@@ -764,7 +764,7 @@ So we worked with manual tests so far, here are the test cases we tried:
 
 Unless stated otherwise all works are Copyright &copy; 2016 [Juiced Team LLC.](http://www.juicedteam.com)
 
-And licensed under the [MIT License](./LICENSE.txt)
+And licensed under the [MIT License](https://raw.githubusercontent.com/MaurGi/JUMP/master/LICENSE.txt)
 
 ### Donate
 If you want to donate, you can simply [purchase the JUMP package in the Unity Asset Store][JUMPAsset].
