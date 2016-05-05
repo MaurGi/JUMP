@@ -60,9 +60,11 @@ streamline and simplify the scenario and build a reusable library.</p>
 </ul>
 
 <h4>
-<a id="version" class="anchor" href="#version" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Version</h4>
+<a id="current-version" class="anchor" href="#current-version" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Current Version</h4>
 
-<p>0.1 [04/30/2016]</p>
+<p>[0.1.2] - 2016-05-05</p>
+
+<p>For details, see <a href="https://raw.githubusercontent.com/MaurGi/JUMP/master/CHANGELOG.md">Changelog</a></p>
 
 <h4>
 <a id="table-of-content" class="anchor" href="#table-of-content" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Table of Content</h4>
@@ -367,6 +369,12 @@ The <code>JUMPMultiplayer</code> will raise an <code>OnSnapshotReceived</code> e
 For more information on how to handle the Snapshots, see the <a href="#jumpgameserver"><code>JUMPGameServer</code></a> section.</p>
 
 <div class="highlight highlight-source-cs"><pre><span class="pl-k">public</span> JUMPSnapshotReceivedUnityEvent OnSnapshotReceived;</pre></div>
+
+<h5>
+<a id="jumpmultiplayerplayerid" class="anchor" href="#jumpmultiplayerplayerid" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a><code>JUMPMultiplayer.PlayerID</code>
+</h5>
+
+<p>Provides the ID of the Photon player object (or -1 if you are not connected to Photon).</p>
 
 <h4>
 <a id="jumpmultplayer-prefabs" class="anchor" href="#jumpmultplayer-prefabs" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>JUMPMultplayer Prefabs</h4>
@@ -904,7 +912,7 @@ Also note how the properties are stored from the second element in the array on,
     {
         RollDice.GetComponent&lt;Text&gt;().text = <span class="pl-s"><span class="pl-pds">"</span>Rolled a <span class="pl-pds">"</span></span> + score + <span class="pl-s"><span class="pl-pds">"</span> <span class="pl-cce">\n</span>roll again..<span class="pl-pds">"</span></span>; 
     }
-    Singleton&lt;JUMPGameClient&gt;.Instance.SendCommandToServer(<span class="pl-k">new</span> DiceRollerCommand_RollDice(PhotonNetwork.player.ID, score));
+    Singleton&lt;JUMPGameClient&gt;.Instance.SendCommandToServer(<span class="pl-k">new</span> DiceRollerCommand_RollDice(JUMPMultiplayer.PlayerID, score));
 }</pre></div>
 
 <p>Finally, the Unity <code>Start</code> function is used to initialize the random seed and in the <code>Update</code> function we enable the RollDice button only if we are playing:</p>
