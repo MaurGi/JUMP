@@ -93,7 +93,7 @@ namespace JUMP
             }
         }
 
-        private static bool applicationIsQuitting = false;
+        public static bool applicationIsQuitting = false;
 
         /// <summary>
         /// When Unity quits, it destroys objects in a random order.
@@ -103,7 +103,7 @@ namespace JUMP
         ///   even after stopping playing the Application. Really bad!
         /// So, this was made to be sure we're not creating that buggy ghost object.
         /// </summary>
-        public void OnDestroy()
+        public void OnApplicationQuit()
         {
             applicationIsQuitting = true;
         }

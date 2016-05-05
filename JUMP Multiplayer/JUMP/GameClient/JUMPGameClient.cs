@@ -49,7 +49,7 @@ namespace JUMP
         // Send a connect command to the server with the photon client id
         public void ConnectToServer()
         {
-            JUMPCommand_Connect c = new JUMPCommand_Connect(PhotonNetwork.player.ID);
+            JUMPCommand_Connect c = new JUMPCommand_Connect(JUMPMultiplayer.PlayerID);
             SendCommandToServer(c);
         }
 

@@ -15,8 +15,10 @@ Out of the box, **JUMP** Provides:
 - Sample Project and Prefabs to get started in 5 minutes
 - Full source code access and great customization.
 
-#### Version
-0.1 [04/30/2016]
+#### Current Version
+[0.1.2] - 2016-05-05
+
+For details, see [Changelog](https://raw.githubusercontent.com/MaurGi/JUMP/master/CHANGELOG.md)
 
 #### Table of Content
 * **[How To Install](#how-to-install)**
@@ -244,6 +246,10 @@ For more information on how to handle the Snapshots, see the [`JUMPGameServer`](
 ```c#
 public JUMPSnapshotReceivedUnityEvent OnSnapshotReceived;
 ```
+
+##### `JUMPMultiplayer.PlayerID`
+Provides the ID of the Photon player object (or -1 if you are not connected to Photon).
+
 #### JUMPMultplayer Prefabs
 The _/JUMP/Multiplayer_ folder contains five prefabs, one for each of the [Stages](#jumpmultiplayerstage).
 The prefabs are:
@@ -706,7 +712,7 @@ public void RollADice()
     {
         RollDice.GetComponent<Text>().text = "Rolled a " + score + " \nroll again.."; 
     }
-    Singleton<JUMPGameClient>.Instance.SendCommandToServer(new DiceRollerCommand_RollDice(PhotonNetwork.player.ID, score));
+    Singleton<JUMPGameClient>.Instance.SendCommandToServer(new DiceRollerCommand_RollDice(JUMPMultiplayer.PlayerID, score));
 }
 ```
 

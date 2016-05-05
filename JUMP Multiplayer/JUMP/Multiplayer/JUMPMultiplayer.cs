@@ -33,6 +33,7 @@ namespace JUMP
         public Stages Stage = Stages.Connection;
         public static bool IsOffline { get { return PhotonNetwork.offlineMode; } }
         public static bool IsRoomFull {  get { return PhotonNetwork.inRoom ? (PhotonNetwork.room.playerCount == PhotonNetwork.room.maxPlayers) : false; } }
+        public static int PlayerID { get { return (PhotonNetwork.player != null) ? (PhotonNetwork.player.ID) : -1; } }
         public DisconnectCause OfflineConnectReason { get; private set; }
         public QuitReason QuitGameReason { get; private set; }
 
@@ -69,6 +70,7 @@ namespace JUMP
         private bool cancelingGameRoom = false;
         private bool quittingPlay = false;
         private bool attemptingToJoinOrCreateRoom = false;
+        private bool applicationIsQuitting = false;
 
         #region UNITY EVENTS **************************************************
         /// <summary>
@@ -159,6 +161,13 @@ namespace JUMP
         void Update()
         {
         }
+
+        void OnApplicationQuit()
+        {
+            LogDebug(() => FormatLogMessage("Quitting => Disconnecting from Photon"));
+            applicationIsQuitting = true;
+            PhotonNetwork.Disconnect();
+        }
         #endregion
 
         #region PHOTON EVENTS *************************************************
@@ -230,6 +239,21 @@ namespace JUMP
         /// </remarks>
         public override void OnDisconnectedFromPhoton()
         {
+            // we get some calls sometimes from Photon when we are in Edit mode
+            if (!Application.isPlaying || applicationIsQuitting)
+            {
+                if (applicationIsQuitting)
+                {
+                    LogDebug(() => FormatLogMessage("Disconnected from Photon while quitting"));
+                }
+                else if (!Application.isPlaying)
+                {
+                    LogDebug(() => FormatLogMessage("Disconnected from Photon while not playing"));
+                }
+
+                return;
+            }
+
             LogInfo(() => FormatLogMessage("Photon.OnDisconnectedFromPhoton"));
             switch (Stage)
             {
@@ -681,8 +705,11 @@ namespace JUMP
                 LogDebug(() => FormatLogMessage("Game Room canceled, leaving the room."));
 
                 // shut down the server
-                Singleton<JUMPGameServer>.Instance.Quit(QuitReason.WeCanceledGameRoom);
-                Singleton<JUMPGameServer>.DestroyInstance();
+                if (PhotonNetwork.isMasterClient)
+                {
+                    Singleton<JUMPGameServer>.Instance.Quit(QuitReason.WeCanceledGameRoom);
+                    Singleton<JUMPGameServer>.DestroyInstance();
+                }
 
                 cancelingGameRoom = true;
                 PhotonNetwork.LeaveRoom();
@@ -724,10 +751,25 @@ namespace JUMP
             else
             {
                 LogInfo(() => FormatLogMessage("Starting a game server with Server of class: {0}", GameServerEngineTypeName));
-                var instance = Activator.CreateInstance(Type.GetType(GameServerEngineTypeName));
+                Type T = Type.GetType(GameServerEngineTypeName);
+                if (T == null)
+                {
+                    LogError(() => FormatLogMessage("To start a game server you have to set the GameServerEngineTypeName parameter to a valid type name"));
+                    return;
+                }
+
+                var instance = Activator.CreateInstance(T);
+
                 if (instance is IJUMPGameServerEngine)
                 {
-                    Singleton<JUMPGameServer>.Instance.StartServer(instance as IJUMPGameServerEngine);
+                    if (PhotonNetwork.isMasterClient)
+                    {
+                        Singleton<JUMPGameServer>.Instance.StartServer(instance as IJUMPGameServerEngine);
+                    }
+                    else
+                    {
+                        LogError(() => FormatLogMessage("Trying to start a server outside of the Master Client"));
+                    }
                 }
                 else
                 {
@@ -755,9 +797,12 @@ namespace JUMP
             Singleton<JUMPGameClient>.Instance.Quit(reason);
             Singleton<JUMPGameClient>.DestroyInstance();
 
-            // quit server and destroy it
-            Singleton<JUMPGameServer>.Instance.Quit(reason);
-            Singleton<JUMPGameServer>.DestroyInstance();
+            if (PhotonNetwork.isMasterClient)
+            {
+                // quit server and destroy it
+                Singleton<JUMPGameServer>.Instance.Quit(reason);
+                Singleton<JUMPGameServer>.DestroyInstance();
+            }
 
             // leave the room if we are still in there
             if (PhotonNetwork.inRoom)
@@ -820,7 +865,7 @@ namespace JUMP
 
         private void RaiseOnSnapshotReceived(JUMPCommand_Snapshot snapshot)
         {
-            LogDebug(() => FormatLogMessage("JUMP.RaiseOnSnapshotReceived"));
+            LogVerbose(() => FormatLogMessage("JUMP.RaiseOnSnapshotReceived"));
             OnSnapshotReceived.Invoke(snapshot);
         }
         #endregion
@@ -828,6 +873,7 @@ namespace JUMP
         #region Logging *****************************************************
         public enum LogLevels
         {
+            Verbose = 3,
             Debug = 2,
             Info = 1,
             Error = 0,
@@ -852,6 +898,11 @@ namespace JUMP
                         break;
                 }
             }
+        }
+
+        private void LogVerbose(Func<string> message)
+        {
+            Log(LogLevels.Verbose, message);
         }
 
         private void LogDebug(Func<string> message)
