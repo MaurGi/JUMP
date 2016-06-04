@@ -1,18 +1,20 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.UI;
 
 namespace JUMP
 {
-    class JUMPStatusConnection : Photon.PunBehaviour
+
+    class JUMPStatusPlayers : Photon.PunBehaviour
     {
-        private Text ConnectionStatus = null;
+        private Text PlayerStatus = null;
 
         [SerializeField]
         private bool debugMode;
 
         void Start()
         {
-            ConnectionStatus = GetComponent<Text>();
+            PlayerStatus = GetComponent<Text>();
 
             // Do not show informations when not in editor or debug mode
             if ((!Application.isEditor) && (!debugMode))
@@ -23,10 +25,7 @@ namespace JUMP
 
         void Update()
         {
-            if (ConnectionStatus != null)
-            {
-                ConnectionStatus.text = "Photon connection status: " + PhotonNetwork.connectionStateDetailed.ToString();
-            }
+            PlayerStatus.text = string.Format("Players: {0} Playing, {1} Total", PhotonNetwork.countOfPlayersInRooms, PhotonNetwork.countOfPlayers);
         }
     }
 }

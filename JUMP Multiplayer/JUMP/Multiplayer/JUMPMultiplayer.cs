@@ -16,25 +16,32 @@ namespace JUMP
         {
             Connection,
             Master,
-            MatchmakeLobby,
             GameRoom,
             Play
         }
 
         public enum QuitReason
         {
-            WeCanceledMatchmake,
             WeCanceledGameRoom,
             WeLostConnection,
             WeQuit,
-            TheyLostConnection
+            TheyLostConnection,
+            LostConnectionToRoom
+        }
+
+        public enum MasterDisconnectCause
+        {
+            NotYetConnected,
+            LostConnectionToPhoton,
+            FailedToCreateRoom
         }
 
         public Stages Stage = Stages.Connection;
         public static bool IsOffline { get { return PhotonNetwork.offlineMode; } }
         public static bool IsRoomFull {  get { return PhotonNetwork.inRoom ? (PhotonNetwork.room.playerCount == PhotonNetwork.room.maxPlayers) : false; } }
         public static int PlayerID { get { return (PhotonNetwork.player != null) ? (PhotonNetwork.player.ID) : -1; } }
-        public DisconnectCause OfflineConnectReason { get; private set; }
+        public MasterDisconnectCause MasterDisconnectReason { get; private set; }
+        public DisconnectCause DisconnectReason { get; private set; }
         public QuitReason QuitGameReason { get; private set; }
 
         // Connection Stage
@@ -43,15 +50,10 @@ namespace JUMP
         // Master Stage 
         public static bool IsConnectedToMaster { get { return ((PhotonNetwork.connectionStateDetailed == PeerState.ConnectedToMaster) || (PhotonNetwork.connectionStateDetailed == PeerState.Authenticated)); } }
         public void Matchmake() { DoMatchmake();  }
-        public UnityEvent OnMasterDisconnect;
-        public UnityEvent OnMatchmakeLobbyConnect;
-
-        // MatchmakeLobby Stage
-        public static bool IsConnectedToMatchmakeLobby { get { return (PhotonNetwork.connectionStateDetailed == PeerState.JoinedLobby); } }
-        public void CancelMatchmake() { DoCancelMatchmake(); }
-        public UnityEvent OnMatchmakeLobbyDisconnect;
         public string GameServerEngineTypeName;
+        public UnityEvent OnMasterDisconnect;
         public UnityEvent OnGameRoomConnect;
+
 
         // GameRoom Stage
         public static bool IsConnectedToGameRoom { get { return ((PhotonNetwork.connectionStateDetailed == PeerState.Joined)); } }
@@ -66,10 +68,9 @@ namespace JUMP
         public UnityEvent OnPlayDisconnected;
 
         // PRIVATE variables.
-        private bool cancelingMatchmaking = false;
+        private bool joinOrCreatingRoom = false;
         private bool cancelingGameRoom = false;
         private bool quittingPlay = false;
-        private bool attemptingToJoinOrCreateRoom = false;
         private bool applicationIsQuitting = false;
 
         #region UNITY EVENTS **************************************************
@@ -81,16 +82,14 @@ namespace JUMP
             LogInfo(() => FormatLogMessage("Unity.Awake"));
 
             // Reset local state changing variables
-            cancelingMatchmaking = false;
             cancelingGameRoom = false;
+            joinOrCreatingRoom = false;
             quittingPlay = false;
-            attemptingToJoinOrCreateRoom = false;
 
             switch (Stage)
             {
                 case Stages.Connection:
                     PhotonNetwork.offlineMode = false;
-                    PhotonNetwork.PhotonServerSettings.EnableLobbyStatistics = true;
                     PhotonNetwork.networkingPeer.DisconnectTimeout = JUMPOptions.DisconnectTimeout;
                     break;
             }
@@ -112,20 +111,8 @@ namespace JUMP
                     if (!IsConnectedToMaster && !IsOffline)
                     {
                         LogDebug(() => FormatLogMessage("We are not connected, need to either connect or figure out we are offline."));
+                        MasterDisconnectReason = MasterDisconnectCause.NotYetConnected;
                         RaiseOnMasterDisconnect();
-                    }
-                    break;
-                case Stages.MatchmakeLobby:
-                    if (IsConnectedToMatchmakeLobby && !IsOffline)
-                    {
-                        attemptingToJoinOrCreateRoom = true;
-                        LogDebug(() => FormatLogMessage("In the matchmaking lobby, trying to join a random game"));
-                        PhotonNetwork.JoinRandomRoom();
-                    }
-                    else
-                    {
-                        LogDebug(() => FormatLogMessage("We are not connected to the matchmake lobby, need to either connect or figure out we are offline."));
-                        RaiseOnMatchmakeLobbyDisconnect();
                     }
                     break;
                 case Stages.GameRoom:
@@ -196,8 +183,13 @@ namespace JUMP
                 {
                     LogDebug(() => FormatLogMessage("Out of the room because game room was canceled, going back to main."));
                     cancelingGameRoom = false;
-                    RaiseOnGameRoomDisconnect();
                 }
+                else
+                {
+                    LogDebug(() => FormatLogMessage("Room was closed, exiting."));
+                }
+                QuitGameReason = QuitReason.LostConnectionToRoom;
+                RaiseOnGameRoomDisconnect();
             }
             else if (Stage == Stages.Play)
             {
@@ -206,8 +198,13 @@ namespace JUMP
                 {
                     LogDebug(() => FormatLogMessage("Out of the room because play was quitted, going back to main."));
                     quittingPlay = false;
-                    RaiseOnPlayDisconnected();
                 }
+                else
+                {
+                    LogDebug(() => FormatLogMessage("Room was closed, exiting."));
+                }
+                QuitGameReason = QuitReason.LostConnectionToRoom;
+                RaiseOnPlayDisconnected();
             }
         }
 
@@ -225,7 +222,7 @@ namespace JUMP
             if (Stage == Stages.Connection)
             {
                 LogError(() => FormatLogMessage("Failed to connected to Master Server: {0}", cause.ToString()));
-                OfflineConnectReason = cause;
+                DisconnectReason = cause;
                 // OnDisconnectedFromPhoton will be called by Photon now.
             }
         }
@@ -259,18 +256,16 @@ namespace JUMP
             {
                 case Stages.Connection:
                 case Stages.Master:
-                case Stages.MatchmakeLobby:
                 case Stages.GameRoom:
                 case Stages.Play:
                     LogDebug(() => FormatLogMessage("Going offline, there is no connection to Photon."));
                     // Setting this will trigger the OnConnectedToMaster, but offlinemode will be true;
                     PhotonNetwork.offlineMode = true;
-                    if (Stage == Stages.Master) RaiseOnMasterDisconnect();
-                    if (Stage == Stages.MatchmakeLobby)
+                    if (Stage == Stages.Master)
                     {
-                        cancelingMatchmaking = false;
-                        attemptingToJoinOrCreateRoom = false;
-                        RaiseOnMatchmakeLobbyDisconnect();
+                        joinOrCreatingRoom = false;
+                        MasterDisconnectReason = MasterDisconnectCause.LostConnectionToPhoton;
+                        RaiseOnMasterDisconnect();
                     }
                     if (Stage == Stages.GameRoom)
                     {
@@ -307,7 +302,7 @@ namespace JUMP
             if (Stage != Stages.Connection)
             {
                 LogError(() => FormatLogMessage("The connection to photon failed : {0}", cause.ToString()));
-                OfflineConnectReason = cause;
+                DisconnectReason = cause;
                 // OnDisconnectedFromPhoton will be called by Photon now.
             }
         }
@@ -324,12 +319,6 @@ namespace JUMP
         /// </remarks>
         public override void OnJoinedLobby()
         {
-            LogInfo(() => FormatLogMessage("Photon.OnJoinedLobby"));
-            if (Stage == Stages.Master)
-            {
-                LogDebug(() => FormatLogMessage("We joined the lobby, go to the MatchmakingLobby stage."));
-                RaiseOnMatchmakeLobbyConnect();
-            }
         }
 
         /// <summary>
@@ -340,14 +329,6 @@ namespace JUMP
         /// automatically refer to the default lobby.
         /// </remarks>
         public override void OnLeftLobby() {
-            LogInfo(() => FormatLogMessage("Photon.OnLeftLobby"));
-            // Using the canceling matchmaking flag.
-            if (cancelingMatchmaking)
-            {
-                LogDebug(() => FormatLogMessage("Out of the lobby becayse matchmake was canceled, going back to main."));
-                cancelingMatchmaking = false;
-                RaiseOnMatchmakeLobbyDisconnect();
-            }
         }
 
         // *** ROOM *** //
@@ -362,11 +343,14 @@ namespace JUMP
         public override void OnPhotonCreateRoomFailed(object[] codeAndMsg)
         {
             LogInfo(() => FormatLogMessage("Photon.OnPhotonCreateRoomFailed: {0}, {1}.", codeAndMsg[0], codeAndMsg[1]));
-            if (Stage == Stages.MatchmakeLobby)
+            if (Stage == Stages.Master)
             {
-                attemptingToJoinOrCreateRoom = false;
-                LogError(() => FormatLogMessage("We are in trouble, can't join and can't create a room have to cancel game room!"));
-                DoCancelMatchmake();
+                // TODO: set a reason
+                LogError(() => FormatLogMessage("We are in trouble, can't join and can't create a room have to go offline!"));
+                MasterDisconnectReason = MasterDisconnectCause.FailedToCreateRoom;
+                PhotonNetwork.offlineMode = true;
+                joinOrCreatingRoom = false;
+                RaiseOnMasterDisconnect();
             }
         }
 
@@ -402,10 +386,9 @@ namespace JUMP
         public override void OnJoinedRoom()
         {
             LogInfo(() => FormatLogMessage("Photon.OnJoinedRoom"));
-            if (Stage == Stages.MatchmakeLobby)
+            if (Stage == Stages.Master)
             {
-                attemptingToJoinOrCreateRoom = false;
-
+                joinOrCreatingRoom = false;
                 // Start the game server if we are the master
                 if (PhotonNetwork.isMasterClient)
                 {
@@ -453,10 +436,10 @@ namespace JUMP
         public override void OnPhotonRandomJoinFailed(object[] codeAndMsg)
         {
             LogInfo(() => FormatLogMessage("Photon.OnPhotonRandomJoinFailed: {0}, {1}.", codeAndMsg[0], codeAndMsg[1]));
-            if (Stage == Stages.MatchmakeLobby)
+            if (Stage == Stages.Master)
             {
                 LogDebug(() => FormatLogMessage("We could not join a room, let's create one and wait for players."));
-                attemptingToJoinOrCreateRoom = true;
+                joinOrCreatingRoom = true;
                 RoomOptions opt = new RoomOptions();
                 opt.maxPlayers = JUMPOptions.NumPlayers;
                 opt.isOpen = true;
@@ -502,7 +485,7 @@ namespace JUMP
         }
         #endregion
 
-        #region NUT USED PHOTON EVENTS 
+        #region NOT USED PHOTON EVENTS 
         /// <summary>
         /// Called for any update of the room-listing while in a lobby (PhotonNetwork.insideLobby) on the Master Server.
         /// </summary>
@@ -674,26 +657,17 @@ namespace JUMP
         private void DoMatchmake()
         {
             LogInfo(() => FormatLogMessage("JUMP.Matchmake"));
-            LogDebug(() => FormatLogMessage("Trying to join the lobby so we can matchmake."));
-            PhotonNetwork.JoinLobby();
-        }
-
-        private void DoCancelMatchmake()
-        {
-            LogInfo(() => FormatLogMessage("JUMP.DoCancelMatchmake"));
-            if (PhotonNetwork.insideLobby)
+            if (joinOrCreatingRoom)
             {
-                if (attemptingToJoinOrCreateRoom)
-                {
-                    LogDebug(() => FormatLogMessage("Trying to cancel matchmake, but it's too late, we are already joining a room."));
-                }
-                else
-                {
-                    LogDebug(() => FormatLogMessage("Matchmake canceled, leaving the lobby."));
-
-                    cancelingMatchmaking = true;
-                    PhotonNetwork.LeaveLobby();
-                }
+                LogInfo(() => FormatLogMessage("Already matchmaking, returning "));
+                return;
+            }
+            else
+            {
+                // Now ging straight to join a room, no more lobby
+                LogDebug(() => FormatLogMessage("Matchmaking trying to join a random room."));
+                joinOrCreatingRoom = true;
+                PhotonNetwork.JoinRandomRoom();
             }
         }
 
@@ -827,18 +801,6 @@ namespace JUMP
             OnMasterDisconnect.Invoke();
         }
 
-        private void RaiseOnMatchmakeLobbyConnect()
-        {
-            LogInfo(() => FormatLogMessage("JUMP.RaiseOnMatchmakeLobbyConnect"));
-            OnMatchmakeLobbyConnect.Invoke();
-        }
-
-        private void RaiseOnMatchmakeLobbyDisconnect()
-        {
-            LogInfo(() => FormatLogMessage("JUMP.RaiseOnMatchmakeLobbyDisconnect"));
-            OnMatchmakeLobbyDisconnect.Invoke();
-        }
-
         private void RaiseOnGameRoomConnect()
         {
             LogInfo(() => FormatLogMessage("JUMP.RaiseOnGameRoomConnect"));
@@ -871,22 +833,9 @@ namespace JUMP
         #endregion
 
         #region Logging *****************************************************
-        public enum LogLevels
-        {
-            Verbose = 3,
-            Debug = 2,
-            Info = 1,
-            Error = 0,
-        }
-
-        #if DEBUG
-        public LogLevels LogLevel = LogLevels.Debug;
-        #else
-        public LogLevels LogLevel = LogLevels.Error;
-        #endif
         private void Log(LogLevels level, Func<string> message)
         {
-            if ((int)LogLevel >= (int)level)
+            if ((int)JUMPOptions.LogLevel >= (int)level)
             {
                 switch (level)
                 {
