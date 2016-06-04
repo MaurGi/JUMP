@@ -62,7 +62,7 @@ streamline and simplify the scenario and build a reusable library.</p>
 <h4>
 <a id="current-version" class="anchor" href="#current-version" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Current Version</h4>
 
-<p>[0.1.2] - 2016-05-05</p>
+<p>[0.2.0] - 2016-05-05</p>
 
 <p>For details, see <a href="https://raw.githubusercontent.com/MaurGi/JUMP/master/CHANGELOG.md">Changelog</a></p>
 
@@ -140,14 +140,14 @@ Then you can use the <a href="#object-model">Object Model</a> and the prefabs.</
 <h4>
 <a id="two-players-networking" class="anchor" href="#two-players-networking" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Two Players networking</h4>
 
-<p>JUMP automates building [Photon] rooms with two players, easy.</p>
+<p>JUMP automates building Photon game rooms, easy.</p>
 
-<p><em>Note:</em> While it can be extended to support more than two players, the support for UI flow is only for the two players scenario</p>
+<p><em>Note:</em> While it supports more than two players, we tested JUMP with the two players scenario</p>
 
 <h4>
 <a id="basic-matchmaking" class="anchor" href="#basic-matchmaking" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Basic Matchmaking</h4>
 
-<p>JUMP supports a single <a href="http://doc.photonengine.com/en/realtime/current/reference/matchmaking-and-lobby">Photon Lobby</a> with <a href="https://doc.photonengine.com/en/realtime/current/reference/matchmaking-and-lobby">Random Matchmaking</a>.</p>
+<p>JUMP uses Photon <a href="https://doc.photonengine.com/en/realtime/current/reference/matchmaking-and-lobby">Random Matchmaking</a> without the use of the Photon Lobby making the UI and the object model much simpler to use compared to the use of the Lobby.</p>
 
 <h4>
 <a id="streamlined-ui-flow" class="anchor" href="#streamlined-ui-flow" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Streamlined UI flow</h4>
@@ -157,7 +157,6 @@ Then you can use the <a href="#object-model">Object Model</a> and the prefabs.</
 <ul>
 <li>Connection</li>
 <li>Home Page (Master)</li>
-<li>Matchmaking Lobby</li>
 <li>[Room] Waiting for players</li>
 <li>[Room] Playing the game</li>
 </ul>
@@ -248,7 +247,6 @@ Then you can use the <a href="#object-model">Object Model</a> and the prefabs.</
 {
     Connection,
     Master,
-    MatchmakeLobby,
     GameRoom,
     Play
 }</pre></div>
@@ -276,40 +274,14 @@ Note that if the connection fails, then the <code>OnMasterConnect</code> event i
 <a id="stagesmaster" class="anchor" href="#stagesmaster" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a><code>Stages.Master</code>
 </h5>
 
-<p>The <code>Master</code> stage is the main screen one, the user is connected to Photon, but not yet into a matchmaking queue or in a game room.
-While connected to the Photon Master server (but not in a Lobby or Room), the <code>JUMPMultiplayer.IsConnectedToMaster</code> property will be set to <code>true</code>.</p>
+<p>The <code>Master</code> stage is the main screen one, the user is connected to Photon, but not yet into a game room.
+While connected to the Photon Master server (but not in a Room), the <code>JUMPMultiplayer.IsConnectedToMaster</code> property will be set to <code>true</code>.</p>
 
 <p>To start the matchmaking proces, you call the <code>Matchmake</code> operation:</p>
 
 <div class="highlight highlight-source-cs"><pre><span class="pl-k">public</span> <span class="pl-k">void</span> Matchmake()</pre></div>
 
-<p>This triggers the request to connect to the default <a href="https://doc.photonengine.com/en/realtime/current/reference/matchmaking-and-lobby">Photon Matchmaking Lobby</a> for your game.</p>
-
-<p>When the connection succees, the <code>OnMatchmakeLobbyConnect</code> event is fired. You want to handle this event by loading the Mathcmaking scene.</p>
-
-<div class="highlight highlight-source-cs"><pre><span class="pl-k">public</span> UnityEvent OnMatchmakeLobbyConnect;</pre></div>
-
-<p>If the connection fails or we lose connection to the PhotonServer, then the <code>OnMasterDisconnect</code> event is fired. You want to handle this event by going back to the 'Connection' scene to try and reconnect once - if reconnection fails, you will be navigate again to the main scree with the <code>IsOffline</code> property set to true - in which case, you want to tell your users that they are offline. </p>
-
-<div class="highlight highlight-source-cs"><pre><span class="pl-k">public</span> UnityEvent OnMasterDisconnect;</pre></div>
-
-<h5>
-<a id="stagesmatchmakelobby" class="anchor" href="#stagesmatchmakelobby" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a><code>Stages.MatchmakeLobby</code>
-</h5>
-
-<p>In the Matchmake lobby, JUMP will try to matchmake to a <a href="https://doc.photonengine.com/en/realtime/current/reference/matchmaking-and-lobby">Photon Game Room</a> using Randon matchmaking.
-While connected to the Photon Lobby, the <code>JUMPMultiplayer.IsConnectedToMatchmakeLobby</code> property will be set to <code>true</code>.</p>
-
-<p>You can cancel the attempt to matchmake by calling the <code>CancelMatchmake</code> operation:</p>
-
-<div class="highlight highlight-source-cs"><pre><span class="pl-k">public</span> <span class="pl-k">void</span> CancelMatchmake()</pre></div>
-
-<p>This will cancel the request to matchmake and raise the <code>OnMatchmakeLobbyDisconnect</code> event:</p>
-
-<div class="highlight highlight-source-cs"><pre><span class="pl-k">public</span> UnityEvent OnMatchmakeLobbyDisconnect;</pre></div>
-
-<p>The <code>OnMatchmakeLobbyDisconnect</code> is also triggered in case of loss of connection to Photon.
-You want to handle this event by going back to the Main screen (<a href="#stagesmaster"><code>Stages.Master</code></a>)</p>
+<p>This will make JUMP try to matchmake and connect to a <a href="https://doc.photonengine.com/en/realtime/current/reference/matchmaking-and-lobby">Photon Game Room</a> using Randon matchmaking.</p>
 
 <p>When a game room is found then the <code>OnGameRoomConnect</code> event is fired:</p>
 
@@ -322,6 +294,10 @@ You want to handle this even by loading a scene that tells the users they are wa
 <p>When the client connects to the Game Room, an instance of the <a href="#jumpgameserver"><code>JUMPGameServer</code></a> is created - this will invoke your custom Server Engine. Just implement the <a href="#ijumpgameserverengine"><code>IJUMPGameServerEngine</code></a> interface in your class and provide the name of the class (including the namespace) to the <code>GameServerEngineTypeName</code> property:</p>
 
 <div class="highlight highlight-source-cs"><pre><span class="pl-k">public</span> <span class="pl-k">string</span> GameServerEngineTypeName;</pre></div>
+
+<p>If the connection fails or we lose connection to the PhotonServer, then the <code>OnMasterDisconnect</code> event is fired. You want to handle this event by going back to the 'Connection' scene to try and reconnect once - if reconnection fails, you will be navigate again to the main scree with the <code>IsOffline</code> property set to true - in which case, you want to tell your users that they are offline. </p>
+
+<div class="highlight highlight-source-cs"><pre><span class="pl-k">public</span> UnityEvent OnMasterDisconnect;</pre></div>
 
 <h5>
 <a id="stagesgameroom" class="anchor" href="#stagesgameroom" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a><code>Stages.GameRoom</code>
@@ -385,7 +361,6 @@ The prefabs are:</p>
 <ul>
 <li>JUMPMultiplayerConnection</li>
 <li>JUMPMultiplayerMaster</li>
-<li>JUMPMultiplayerMatchmakeLobby</li>
 <li>JUMPMultiplayerGameRoom</li>
 <li>JUMPMultiplayerPlay</li>
 </ul>
@@ -411,7 +386,7 @@ The prefabs are:</p>
 
 <p>The <code>JUMPGameServer</code> will send a numbe of snapshots to the client per second that can be customized setting the <code>JUMPOptions.SnapshotsPerSec</code> property, the default is 3 snapshots per second.</p>
 
-<p>The <code>JUMPGameServer</code> is designed to interact with your custom Server Engine - just implement the <a href="#ijumpgameserverengine"><code>IJUMPGameServerEngine</code></a> interface and set the <code>GameServerEngineTypeName</code> property of a <code>JUMPMultiplayer</code> instance with Stage <a href="#stagesmatchmakelobby"><code>Stages.MatchmakeLobby</code></a> (or a <em>JUMPMultiplayerMatchmakeLobby</em> prefab).</p>
+<p>The <code>JUMPGameServer</code> is designed to interact with your custom Server Engine - just implement the <a href="#ijumpgameserverengine"><code>IJUMPGameServerEngine</code></a> interface and set the <code>GameServerEngineTypeName</code> property of a <code>JUMPMultiplayer</code> instance with Stage <a href="#stagesmaster"><code>Stages.Master</code></a> (or a <em>JUMPMultiplayerMaster</em> prefab).</p>
 
 <h4>
 <a id="ijumpgameserverengine" class="anchor" href="#ijumpgameserverengine" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>IJUMPGameServerEngine</h4>
@@ -434,7 +409,7 @@ An instance of your Server Engine will be hosted by the <a href="http://doc.phot
 <a id="void-startgamelistjumpplayer-players" class="anchor" href="#void-startgamelistjumpplayer-players" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a><code>void StartGame(List&lt;JUMPPlayer&gt; Players)</code>
 </h6>
 
-<p><strong>JUMP</strong> will call StartGame when the <code>JUMPMultiplayer</code> is in the <code>MatchmakeLobby</code> stage and the player joins (or creates) a Room, right before calling <code>OnGameRoomConnect</code>.
+<p><strong>JUMP</strong> will call StartGame when the <code>JUMPMultiplayer</code> is in the <code>Master</code> stage and the player joins (or creates) a Room, right before calling <code>OnGameRoomConnect</code>.
 In this operation, you want to initialize your game state, using the information on the <code>Players</code> list to save the list of players that are in the game.</p>
 
 <p>For example, the <a href="#diceroller-customs-erver">DiceRoller Custom Server</a> intializes its own GameState and saves the players using a custom DiceRollerPlayer class.</p>
@@ -561,7 +536,7 @@ It is made of five scenes, a custom Server Engine and a Game Manager for the pla
 <li>
 <code>OnMasterDisconnect</code> that goes back to the Connection Scene to try and reconnect once.</li>
 <li>
-<code>OnMatchmakeLobbyConnect</code> that loads the Matchmake Lobby Scene</li>
+<code>OnGameRoomConnect</code> that loads the Game Room Scene</li>
 </ul>
 
 <p>The scene uses a few more UI prefabs:</p>
@@ -570,33 +545,12 @@ It is made of five scenes, a custom Server Engine and a Game Manager for the pla
 <li>
 <strong>JUMPStatusOnline</strong> that displays if the client is online (connected with Photon) or offline</li>
 <li>
-<strong>JUMPStatusDefaultLobby</strong> that displays the number of players connected to the Photon Lobby</li>
+<strong>JUMPStatusPlayers</strong> that displays the number of players connected to Photon</li>
 <li>
-<strong>JUMPButtonMatchmake</strong> a simple text button that is enabled when we are connected to the Photon Master Server; if the user clicks the button, then we invoke the <code>Matchmake</code> operation on the <strong>JUMPMultiplayerMaster</strong> prefab.</li>
-</ul>
-
-<h4>
-<a id="matchmake-lobby-scene" class="anchor" href="#matchmake-lobby-scene" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Matchmake Lobby Scene</h4>
-
-<p>The Matchmake Lobby Scene has has one instance of the <strong>JUMPMultiplayerMatchmakeLobby</strong> prefab.</p>
-
-<p>The scene handles two events:</p>
-
-<ul>
-<li>
-<code>OnMatchmakeLobbyDisconnect</code> that goes back to the Master Scene.</li>
-<li>
-<code>OnGameRoomConnect</code> that loads the Game Room Scene</li>
+<strong>JUMPButtonStartMatchmaking</strong> a simple text button that is enabled when we are connected to the Photon Master Server; if the user clicks the button, then we invoke the <code>Matchmake</code> operation on the <strong>JUMPMultiplayerMaster</strong> prefab.</li>
 </ul>
 
 <p>It also sets the <code>GameServerEngineTypeName</code> variable to <code>"DiceRollerSample.DiceRollerEngine"</code> to create a custom server engine - for details see the [DiceRoller Custom Server].</p>
-
-<p>The scene uses a few more UI prefabs:</p>
-
-<ul>
-<li>
-<strong>JUMPButtonCancelMatchmake</strong> which is enabled during this phase of the UI Flow. If the user clicks the button, then we invoke the <code>CancelMatchmake</code> operation on the <strong>JUMPMultiplayerMatchmakeLobby</strong> prefab.</li>
-</ul>
 
 <h4>
 <a id="game-room-scene" class="anchor" href="#game-room-scene" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Game Room Scene</h4>
@@ -847,7 +801,7 @@ Also note how the properties are stored from the second element in the array on,
 
 <p>The <code>TakeSnapshot</code> operation is called by <code>JUMPGameServer</code> to send the snapshot to a player, so the snapshot is created for that specific player:</p>
 
-<div class="highlight highlight-source-cs"><pre><span class="pl-k">public</span> JUMPCommand_Snapshot TakeSnapshot(<span class="pl-k">int</span> ForPlayerID)
+<div class="highlight highlight-source-cs"><pre><span class="pl-k">public</span> JUMPCommand_Snapshot TakeSnapshot(<span class="pl-k">int</span> FofrPlayerID)
 {
     DiceRoller_Snapshot snap = <span class="pl-k">new</span> DiceRoller_Snapshot();
     snap.ForPlayerID = ForPlayerID;
