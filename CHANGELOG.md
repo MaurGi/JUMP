@@ -13,3 +13,8 @@
 - Fixed a bug when Unity is quitting on singleton
 - Improved logging in some error conditions
 - Bug fixing
+
+## [0.2.0] - 2016-06-02
+### Changed
+- Removed the step that joins to the Photon Lobby, now you can join the game straight from the Server - easier user flow and object model
+- Bug fixing
