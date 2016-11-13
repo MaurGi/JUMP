@@ -41,6 +41,9 @@
         <h1>
 <a id="jump-just-unity-multiplayer-with-photon" class="anchor" href="#jump-just-unity-multiplayer-with-photon" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>JUMP (Just Unity Multiplayer with Photon)</h1>
 
+<h3>
+<a id="-new-version-03---now-with-offline-play-with-bots-support-" class="anchor" href="#-new-version-03---now-with-offline-play-with-bots-support-" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>** NEW: Version 0.3 - now with offline play with bots support! **</h3>
+
 <p><strong>JUMP</strong> is a library that facilitates writing <strong>simple multiplayer games</strong> using <strong><a href="http://unity3d.com/unity">Unity 3D</a></strong> 
 and <strong><a href="http://www.photonengine.com/PUN">Photon Unity Networking</a></strong>.</p>
 
@@ -62,17 +65,21 @@ streamline and simplify the scenario and build a reusable library.</p>
 <h4>
 <a id="current-version" class="anchor" href="#current-version" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Current Version</h4>
 
-<p>[0.2.0] - 2016-05-05</p>
+<p>[0.3.0] - 2016-11-13 - Adding offline bots support!</p>
 
 <p>For details, see <a href="https://raw.githubusercontent.com/MaurGi/JUMP/master/CHANGELOG.md">Changelog</a></p>
 
+<h3>
+<a id="table-of-content" class="anchor" href="#table-of-content" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Table of Content</h3>
+
 <h4>
-<a id="table-of-content" class="anchor" href="#table-of-content" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Table of Content</h4>
+<a id="table-of-content-1" class="anchor" href="#table-of-content-1" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Table of Content</h4>
 
 <ul>
 <li><strong><a href="#how-to-install">How To Install</a></strong></li>
 <li><strong><a href="#scenario">Scenario</a></strong></li>
 <li><strong><a href="#object-model">Object Model</a></strong></li>
+<li><strong><a href="#offline-bots">(NEW!!) Offline Bots</a></strong></li>
 <li><strong><a href="#diceroller-sample">DiceRoller Sample</a></strong></li>
 <li><strong><a href="#testing-jump">Testing JUMP</a></strong></li>
 <li><strong><a href="#features-to-add">Features to Add</a></strong></li>
@@ -211,6 +218,8 @@ Then you can use the <a href="#object-model">Object Model</a> and the prefabs.</
 <li><a href="http://docs.unity3d.com/Manual/UNetConcepts.html">Unity Networking</a></li>
 </ul>
 
+<hr>
+
 <h1>
 <a id="object-model" class="anchor" href="#object-model" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Object Model</h1>
 
@@ -225,6 +234,7 @@ Then you can use the <a href="#object-model">Object Model</a> and the prefabs.</
 <li><a href="#jumpcommand_snapshot"><code>JUMPCommand_Snapshot</code></a></li>
 <li><a href="#jumpplayer"><code>JUMPPlayer</code></a></li>
 <li><a href="#jumpoptions"><code>JUMPOptions</code></a></li>
+<li><a href="#ijumpbot">'IJUMPBot'</a></li>
 </ul>
 
 <h4>
@@ -248,7 +258,8 @@ Then you can use the <a href="#object-model">Object Model</a> and the prefabs.</
     Connection,
     Master,
     GameRoom,
-    Play
+    Play,
+    OfflinePlay
 }</pre></div>
 
 <p>At high level the <code>Stages</code> state diagram is the following:</p>
@@ -277,7 +288,7 @@ Note that if the connection fails, then the <code>OnMasterConnect</code> event i
 <p>The <code>Master</code> stage is the main screen one, the user is connected to Photon, but not yet into a game room.
 While connected to the Photon Master server (but not in a Room), the <code>JUMPMultiplayer.IsConnectedToMaster</code> property will be set to <code>true</code>.</p>
 
-<p>To start the matchmaking proces, you call the <code>Matchmake</code> operation:</p>
+<p>To start the matchmaking process, you call the <code>Matchmake</code> operation:</p>
 
 <div class="highlight highlight-source-cs"><pre><span class="pl-k">public</span> <span class="pl-k">void</span> Matchmake()</pre></div>
 
@@ -298,6 +309,12 @@ You want to handle this even by loading a scene that tells the users they are wa
 <p>If the connection fails or we lose connection to the PhotonServer, then the <code>OnMasterDisconnect</code> event is fired. You want to handle this event by going back to the 'Connection' scene to try and reconnect once - if reconnection fails, you will be navigate again to the main scree with the <code>IsOffline</code> property set to true - in which case, you want to tell your users that they are offline. </p>
 
 <div class="highlight highlight-source-cs"><pre><span class="pl-k">public</span> UnityEvent OnMasterDisconnect;</pre></div>
+
+<p>For offline play with bots, use:</p>
+
+<div class="highlight highlight-source-cs"><pre><span class="pl-k">public</span> <span class="pl-k">void</span> OfflinePlay()</pre></div>
+
+<p>This will set up offline server and client as well as creating Bots (implementing the IJUMPBots interface) and then trigger the `OnOfflinePlayConnect' event.</p>
 
 <h5>
 <a id="stagesgameroom" class="anchor" href="#stagesgameroom" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a><code>Stages.GameRoom</code>
@@ -347,6 +364,14 @@ For more information on how to handle the Snapshots, see the <a href="#jumpgames
 <div class="highlight highlight-source-cs"><pre><span class="pl-k">public</span> JUMPSnapshotReceivedUnityEvent OnSnapshotReceived;</pre></div>
 
 <h5>
+<a id="stagesofflineplay" class="anchor" href="#stagesofflineplay" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a><code>Stages.OfflinePlay</code>
+</h5>
+
+<p>In this stage, the <code>IsOfflinePlay</code> property is set to true.
+You will receive regular events like with online play <code>OnSnapshotReceived</code> and you can send command as well <code>GameClient.SendCommand(Command)</code>.
+You can quit calling <code>QuitPlay</code>, same as in the online play scenario.</p>
+
+<h5>
 <a id="jumpmultiplayerplayerid" class="anchor" href="#jumpmultiplayerplayerid" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a><code>JUMPMultiplayer.PlayerID</code>
 </h5>
 
@@ -370,11 +395,11 @@ The prefabs are:</p>
 <h4>
 <a id="jumpgameclient" class="anchor" href="#jumpgameclient" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>JUMPGameClient</h4>
 
-<p><code>JUMPGameClient</code> uses the singleton pattern, to access it, use the <code>Singleton&lt;JUMPGameClient&gt;.Instance</code> property.</p>
+<p><code>JUMPGameClient</code> uses the singleton pattern, to access it, use the <code>JUMPMultiplayer.GameClient</code> property (which refers to <code>Singleton&lt;JUMPGameClient&gt;.Instance</code>.</p>
 
 <p>You use the <code>JUMPGameClient</code> to send commands to the server; to do so, just use the <code>SendCommandToServer</code> operation. To define your own commands, see <a href="#jumpcommand"><code>JUMPCommand</code></a>.</p>
 
-<div class="highlight highlight-source-cs"><pre>Singleton&lt;JUMPGameClient&gt;.Instance.SendCommandToServer(<span class="pl-k">new</span> myCommand());</pre></div>
+<div class="highlight highlight-source-cs"><pre>JUMPMultiplayer.GameClient.SendCommandToServer(<span class="pl-k">new</span> myCommand());</pre></div>
 
 <p>The <code>ConnectToServer</code> operation and <code>OnSnapshotReceived</code> event are used internally by <code>JUMPMultiplayer</code>, you don't need to worry about them :)</p>
 
@@ -511,6 +536,49 @@ You can extend the <code>JUMPPlayer</code> with your own properties, like Score 
 <p>Note that <code>DisconnectTimeout</code> is set to 60 seconds if the build is in Debug mode.</p>
 
 <h1>
+<a id="offline-bots" class="anchor" href="#offline-bots" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Offline Bots</h1>
+
+<p>Offline Bots ara available in the Offline Play state.</p>
+
+<p>To create a Bot, you need to have a class that implements the <code>IJUMPBot</code> interface.</p>
+
+<p>Note, that a bot is also a player, so the <code>IJUMPBot</code> implements also the 'IJUMPPlayer' interface.</p>
+
+<p>JUMP will create automatically as many bots as the number of players in the game (<code>JUMPOptions.NumPlayers</code>) minus one for your human player.</p>
+
+<p>Note: a mix of online players and bots is not supported, you can only have one human player and the rest bots.</p>
+
+<h3>
+<a id="offline-play" class="anchor" href="#offline-play" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Offline play</h3>
+
+<p>To start the offline play with bots, set the <code>BotTypeName</code> property with the class name of the bot you want to use and then call the <code>OfflinePlay</code> method, when you are in the Master stage.</p>
+
+<p>This will create a list of Bots and trigger the <code>OnOfflinePlayConnect</code> event.</p>
+
+<p>At this point you want to load a scene with a JUMPMultiplayer object in OfflinePlay stage.</p>
+
+<p>The client will receive snapshot and you can send commands, like in the online <code>Play</code> stage, but in this case, your bots will be invoked and will be sending commands to the server.</p>
+
+<p>You can very easily have a single play scene that handles online and offline play, all you need to do is have a <code>JUMPMultiplayerPlay</code> and a <code>JUMPMultiplayerOfflinePlay</code> prefabs (disabled) in the play scene, then in the <code>Activate</code> function, check the JUMPMultiplayer.IsOfflinePlay property and just set active the relevant one - see the DiceRoller sample for an example.</p>
+
+<h3>
+<a id="writing-a-bot" class="anchor" href="#writing-a-bot" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Writing a Bot</h3>
+
+<p>To facilitate writing engaging Bots, they have full access to the state of the game.
+Bots don't use the snapshot, but get a pointer to your Engine, where you usually store your game state, and a Tick from the server:</p>
+
+<div class="highlight highlight-source-cs"><pre><span class="pl-k">public</span> <span class="pl-k">interface</span> <span class="pl-en">IJUMPBot</span> : <span class="pl-k">IJUMPPlayer</span>
+{
+    <span class="pl-k">void</span> <span class="pl-en">Tick</span>(<span class="pl-k">double</span> <span class="pl-smi">ElapsedSeconds</span>);
+
+    IJUMPGameServerEngine <span class="pl-en">Engine</span> { <span class="pl-k">get</span>; <span class="pl-k">set</span>; }
+}</pre></div>
+
+<p>In the Tick event, you want to access the state on your Engine and have your bots behave accordingly.</p>
+
+<p>In the DiceRoller sample, for example, the Bot simply rolls a 3 every three seconds. Note that you can access <code>(DiceRollerEngine) Engine</code> and have full access to your state, for example you want your bot to try and catch up with the player and have a higher chance to roll a high number if the bot is behind.</p>
+
+<h1>
 <a id="diceroller-sample" class="anchor" href="#diceroller-sample" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>DiceRoller Sample</h1>
 
 <p>DiceRoller is a simple example of how to use <strong>JUMP</strong>.
@@ -528,15 +596,26 @@ It is made of five scenes, a custom Server Engine and a Game Manager for the pla
 <h4>
 <a id="master-scene" class="anchor" href="#master-scene" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Master Scene</h4>
 
-<p>The Master Scene has has one instance of the <strong>JUMPMultiplayerMaster</strong> prefab.</p>
+<p>The Master Scene has has one instance of the <strong>JUMPMultiplayerMaster</strong> prefab and can handle online and offline play with bots.</p>
 
-<p>The scene handles two events:</p>
+<p>The scene handles the <code>OnMasterDisconnect</code> event, that goes back to the Connection Scene to try and reconnect once.</p>
+
+<p>The scene sets the <code>GameServerEngineTypeName</code> variable to <code>"DiceRollerSample.DiceRollerEngine"</code> to create a custom server engine - for details see the [DiceRoller Custom Server].</p>
+
+<p>The scene sets the <code>BotTypeName</code> variable to <code>"DiceRollerSample.DiceRollerBot"</code> to create a custom bot - for details see the [DiceRoller Bot].</p>
+
+<p>For the online play:</p>
 
 <ul>
-<li>
-<code>OnMasterDisconnect</code> that goes back to the Connection Scene to try and reconnect once.</li>
-<li>
-<code>OnGameRoomConnect</code> that loads the Game Room Scene</li>
+<li>The scene has a <strong>JUMPButtonStartMatchmaking</strong> a simple text button that is enabled when we are connected to the Photon Master Server; if the user clicks the button, then we invoke the <code>Matchmake</code> operation on the <em>JUMPMultiplayerMaster</em>* prefab.</li>
+<li>The scene then responds to the <code>OnGameRoomConnect</code> and loads the Game Room Scene</li>
+</ul>
+
+<p>For the offline play:</p>
+
+<ul>
+<li>The scene has a <strong>JUMPButtonStartOfflinePlay</strong> if the user clicks the button, then we invoke the <code>OfflinePlay</code> operation on the <em>JUMPMultiplayerMaster</em>* prefab.</li>
+<li>The scene then responds to the <code>OnOfflinePlayConnect</code> and loads the Play Scene</li>
 </ul>
 
 <p>The scene uses a few more UI prefabs:</p>
@@ -546,11 +625,7 @@ It is made of five scenes, a custom Server Engine and a Game Manager for the pla
 <strong>JUMPStatusOnline</strong> that displays if the client is online (connected with Photon) or offline</li>
 <li>
 <strong>JUMPStatusPlayers</strong> that displays the number of players connected to Photon</li>
-<li>
-<strong>JUMPButtonStartMatchmaking</strong> a simple text button that is enabled when we are connected to the Photon Master Server; if the user clicks the button, then we invoke the <code>Matchmake</code> operation on the <strong>JUMPMultiplayerMaster</strong> prefab.</li>
 </ul>
-
-<p>It also sets the <code>GameServerEngineTypeName</code> variable to <code>"DiceRollerSample.DiceRollerEngine"</code> to create a custom server engine - for details see the [DiceRoller Custom Server].</p>
 
 <h4>
 <a id="game-room-scene" class="anchor" href="#game-room-scene" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Game Room Scene</h4>
@@ -578,9 +653,26 @@ It is made of five scenes, a custom Server Engine and a Game Manager for the pla
 <h4>
 <a id="play-scene" class="anchor" href="#play-scene" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Play Scene</h4>
 
-<p>The Game Room Scene has one instance of the <strong>JUMPMultiplayerPlay</strong> prefab.</p>
+<p>The Game Room Scene has two instance of the <strong>JUMPMultiplayerPlay</strong> prefab:</p>
 
-<p>The scene handles two events:</p>
+<ul>
+<li>
+<code>JUMPMultiplayerPlay</code> is the one that handles the online play </li>
+<li>
+<code>JUMPMultiplayerOfflinePlay</code> is the one that handles the offline play:</li>
+</ul>
+
+<p>The play scene manager (<code>DiceRollerGameManager</code>) activates one of the prefabs, based on the OfflinePlayMode:</p>
+
+<pre><code>    void Start()
+    {
+        ...
+        OfflinePlayManager.gameObject.SetActive(JUMPMultiplayer.IsOfflinePlayMode);
+        OnlinePlayManager.gameObject.SetActive(!JUMPMultiplayer.IsOfflinePlayMode);
+    }
+</code></pre>
+
+<p>For both online and offlinePlay, the scene handles the same two events (fired by the active JUMPMultiplayer prefab):</p>
 
 <ul>
 <li>
@@ -873,12 +965,45 @@ Also note how the properties are stored from the second element in the array on,
 
 <div class="highlight highlight-source-cs"><pre><span class="pl-c">// Use this for initialization</span>
 <span class="pl-k">void</span> Start () {
-    UnityEngine.Random.seed = System.DateTime.Now.Millisecond;
+    UnityEngine.Random.seed = System.DateTime.Now.Millisecond; 
 }
 
 <span class="pl-c">// Update is called once per frame</span>
 <span class="pl-k">void</span> Update () {
     RollDice.interactable = (UIStage == DiceRollerGameStages.Playing);
+}</pre></div>
+
+<h3>
+<a id="diceroller-bot" class="anchor" href="#diceroller-bot" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>DiceRoller Bot</h3>
+
+<p>The <code>DiceRollerBot</code> is very simple, just rolls a 3 every three seconds!</p>
+
+<p>You can develop deeper strategies having full access to the <code>DiceRollerEngine</code> and the full <code>DiceRollerGameState</code> (the Bot can distinguish his score from his opponent using the Bot's <code>PlayerID</code>, set bv the engine.</p>
+
+<p>Here is the full bot implementation:</p>
+
+<div class="highlight highlight-source-cs"><pre><span class="pl-k">public</span> <span class="pl-k">class</span> <span class="pl-en">DiceRollerBot</span> : <span class="pl-k">JUMPPlayer</span>, <span class="pl-k">IJUMPBot</span>
+{
+    <span class="pl-k">public</span> <span class="pl-k">int</span> Score = <span class="pl-c1">0</span>;
+
+    <span class="pl-k">private</span> TimeSpan TickTimer = TimeSpan.Zero;
+    <span class="pl-k">private</span> TimeSpan CommandsFrequency = TimeSpan.FromMilliseconds(<span class="pl-c1">1000</span> / <span class="pl-c1">0.3</span>);
+
+    <span class="pl-k">public</span> IJUMPGameServerEngine <span class="pl-en">Engine</span> { <span class="pl-k">get</span>; <span class="pl-k">set</span>; }
+
+    <span class="pl-k">public</span> <span class="pl-k">void</span> <span class="pl-en">Tick</span>(<span class="pl-k">double</span> <span class="pl-smi">ElapsedSeconds</span>)
+    {
+        TickTimer += TimeSpan.FromSeconds(ElapsedSeconds);
+        <span class="pl-k">if</span> (TickTimer &gt; CommandsFrequency)
+        {
+            TickTimer = TimeSpan.Zero;
+
+            <span class="pl-c">// Every 3 seconds, roll a 3</span>
+            DiceRollerEngine engine = Engine <span class="pl-k">as</span> DiceRollerEngine;
+
+            engine.ProcessCommand(<span class="pl-k">new</span> DiceRollerCommand_RollDice(PlayerID, <span class="pl-c1">3</span>));
+        }
+    }
 }</pre></div>
 
 <h1>
@@ -934,10 +1059,16 @@ We thought about mocking, but then it would require to mock the behaviour of Pho
 
 <ul>
 <li>Unit test, or at least automation test (with Unity allowing a single window and a single instance this is hard)</li>
-<li>Support for bots when there are not enough players online (users in a room by himself for too long)</li>
 <li>Improved reliability and speed with delta compression of Snapshots and list of not-acknowledged Commands.</li>
 <li>Matchmaking not random but with customizable criteria (SQLLobbies)</li>
 <li>Source Code comments on public variables and methods?</li>
+</ul>
+
+<h1>
+<a id="features-added" class="anchor" href="#features-added" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Features added</h1>
+
+<ul>
+<li>(Version 0.3.0) Support for bots when there are not enough players online (users in a room by himself for too long)</li>
 </ul>
 
 <hr>
