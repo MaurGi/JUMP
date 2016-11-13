@@ -8,6 +8,7 @@ JUMP Uses the following classes:
 * [`JUMPCommand_Snapshot`](#jumpcommand_snapshot)
 * [`JUMPPlayer`](#jumpplayer)
 * [`JUMPOptions`](#jumpoptions)
+* ['IJUMPBot'](#ijumpbot)
 
 #### JUMPMultiplayer
 `JUMPMultiplayer` is the main class in **JUMP**, handling the connection to the server, the matchmaking, setting up the game room and managing the game client and server. 
@@ -26,7 +27,8 @@ public enum Stages
     Connection,
     Master,
     GameRoom,
-    Play
+    Play,
+	OfflinePlay
 }
 ```
 
@@ -48,7 +50,7 @@ Note that if the connection fails, then the `OnMasterConnect` event is raised, b
 The `Master` stage is the main screen one, the user is connected to Photon, but not yet into a game room.
 While connected to the Photon Master server (but not in a Room), the `JUMPMultiplayer.IsConnectedToMaster` property will be set to `true`.
 
-To start the matchmaking proces, you call the `Matchmake` operation:
+To start the matchmaking process, you call the `Matchmake` operation:
 ```c#
 public void Matchmake()
 ```
@@ -70,6 +72,14 @@ If the connection fails or we lose connection to the PhotonServer, then the `OnM
 ```c#
 public UnityEvent OnMasterDisconnect;
 ```
+
+For offline play with bots, use:
+```c#
+public void OfflinePlay()
+```
+
+This will set up offline server and client as well as creating Bots (implementing the IJUMPBots interface) and then trigger the `OnOfflinePlayConnect' event.
+
 
 ##### `Stages.GameRoom`
 In this stage, the player is connected to a [Photon Game Room](https://doc.photonengine.com/en/realtime/current/reference/matchmaking-and-lobby) and waiting for the room to be full with two players.
@@ -112,6 +122,11 @@ For more information on how to handle the Snapshots, see the [`JUMPGameServer`](
 public JUMPSnapshotReceivedUnityEvent OnSnapshotReceived;
 ```
 
+##### `Stages.OfflinePlay`
+In this stage, the `IsOfflinePlay` property is set to true.
+You will receive regular events like with online play `OnSnapshotReceived` and you can send command as well `GameClient.SendCommand(Command)`.
+You can quit calling `QuitPlay`, same as in the online play scenario.
+
 ##### `JUMPMultiplayer.PlayerID`
 Provides the ID of the Photon player object (or -1 if you are not connected to Photon).
 
@@ -126,11 +141,11 @@ The prefabs are:
 The prefabs are simply a Game Object with a `JUMPMultiplayer` component set to the relative `Stage`. The idea is to place these in each of the five scenes that will compose the [UI Flow](#streamlined-ui-flow)
 
 #### JUMPGameClient
-`JUMPGameClient` uses the singleton pattern, to access it, use the `Singleton<JUMPGameClient>.Instance` property.
+`JUMPGameClient` uses the singleton pattern, to access it, use the `JUMPMultiplayer.GameClient` property (which refers to `Singleton<JUMPGameClient>.Instance`.
 
 You use the `JUMPGameClient` to send commands to the server; to do so, just use the `SendCommandToServer` operation. To define your own commands, see [`JUMPCommand`](#jumpcommand).
 ```c#
-Singleton<JUMPGameClient>.Instance.SendCommandToServer(new myCommand());
+JUMPMultiplayer.GameClient.SendCommandToServer(new myCommand());
 ```
 
 The `ConnectToServer` operation and `OnSnapshotReceived` event are used internally by `JUMPMultiplayer`, you don't need to worry about them :)

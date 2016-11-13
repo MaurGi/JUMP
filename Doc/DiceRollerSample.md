@@ -10,18 +10,25 @@ The only event handled by the scene the `OnMasterDisconnect`, in which we load t
 The Scene also uses the UI Prefab **JUMPStatusConnection** that displays the status of the connection with Photon.
 
 #### Master Scene
-The Master Scene has has one instance of the **JUMPMultiplayerMaster** prefab.
+The Master Scene has has one instance of the **JUMPMultiplayerMaster** prefab and can handle online and offline play with bots.
 
-The scene handles two events:
-* `OnMasterDisconnect` that goes back to the Connection Scene to try and reconnect once.
-* `OnGameRoomConnect` that loads the Game Room Scene
+The scene handles the `OnMasterDisconnect` event, that goes back to the Connection Scene to try and reconnect once.
+
+The scene sets the `GameServerEngineTypeName` variable to `"DiceRollerSample.DiceRollerEngine"` to create a custom server engine - for details see the [DiceRoller Custom Server].
+
+The scene sets the `BotTypeName` variable to `"DiceRollerSample.DiceRollerBot"` to create a custom bot - for details see the [DiceRoller Bot].
+
+For the online play:
+* The scene has a **JUMPButtonStartMatchmaking** a simple text button that is enabled when we are connected to the Photon Master Server; if the user clicks the button, then we invoke the `Matchmake` operation on the *JUMPMultiplayerMaster** prefab.
+* The scene then responds to the `OnGameRoomConnect` and loads the Game Room Scene
+
+For the offline play:
+* The scene has a **JUMPButtonStartOfflinePlay** if the user clicks the button, then we invoke the `OfflinePlay` operation on the *JUMPMultiplayerMaster** prefab.
+* The scene then responds to the `OnOfflinePlayConnect` and loads the Play Scene
 
 The scene uses a few more UI prefabs:
 * **JUMPStatusOnline** that displays if the client is online (connected with Photon) or offline
 * **JUMPStatusPlayers** that displays the number of players connected to Photon
-* **JUMPButtonStartMatchmaking** a simple text button that is enabled when we are connected to the Photon Master Server; if the user clicks the button, then we invoke the `Matchmake` operation on the **JUMPMultiplayerMaster** prefab.
-
-It also sets the `GameServerEngineTypeName` variable to `"DiceRollerSample.DiceRollerEngine"` to create a custom server engine - for details see the [DiceRoller Custom Server].
 
 #### Game Room Scene
 The Game Room Scene has one instance of the **JUMPMultiplayerGameRoom** prefab.
@@ -35,9 +42,21 @@ The scene uses a few more UI prefabs:
 * **JUMPButtonCancelGameRoom** which is enabled during this phase of the UI Flow. If the user clicks the button, then we invoke the `CancelGameRoom` operation on the **JUMPMultiplayerGameRoom** prefab.
 
 #### Play Scene
-The Game Room Scene has one instance of the **JUMPMultiplayerPlay** prefab.
+The Game Room Scene has two instance of the **JUMPMultiplayerPlay** prefab:
+* `JUMPMultiplayerPlay` is the one that handles the online play 
+* `JUMPMultiplayerOfflinePlay` is the one that handles the offline play:
 
-The scene handles two events:
+The play scene manager (`DiceRollerGameManager`) activates one of the prefabs, based on the OfflinePlayMode:
+```
+    void Start()
+    {
+		...
+        OfflinePlayManager.gameObject.SetActive(JUMPMultiplayer.IsOfflinePlayMode);
+        OnlinePlayManager.gameObject.SetActive(!JUMPMultiplayer.IsOfflinePlayMode);
+    }
+```
+
+For both online and offlinePlay, the scene handles the same two events (fired by the active JUMPMultiplayer prefab):
 * `OnPlayDisconnect` that goes back to the Master Scene.
 * `OnSnapshotReceived` that handles the Snapshots form the server via the DiceRollerGameManager - see [DiceRoller Custom Server] for details
 
@@ -329,11 +348,44 @@ Finally, the Unity `Start` function is used to initialize the random seed and in
 ```c#
 // Use this for initialization
 void Start () {
-    UnityEngine.Random.seed = System.DateTime.Now.Millisecond;
+    UnityEngine.Random.seed = System.DateTime.Now.Millisecond; 
 }
 
 // Update is called once per frame
 void Update () {
     RollDice.interactable = (UIStage == DiceRollerGameStages.Playing);
 }
+```
+
+### DiceRoller Bot
+
+The `DiceRollerBot` is very simple, just rolls a 3 every three seconds!
+
+You can develop deeper strategies having full access to the `DiceRollerEngine` and the full `DiceRollerGameState` (the Bot can distinguish his score from his opponent using the Bot's `PlayerID`, set bv the engine.
+
+Here is the full bot implementation:
+```
+    public class DiceRollerBot : JUMPPlayer, IJUMPBot
+    {
+        public int Score = 0;
+
+        private TimeSpan TickTimer = TimeSpan.Zero;
+        private TimeSpan CommandsFrequency = TimeSpan.FromMilliseconds(1000 / 0.3);
+
+        public IJUMPGameServerEngine Engine { get; set; }
+
+        public void Tick(double ElapsedSeconds)
+        {
+            TickTimer += TimeSpan.FromSeconds(ElapsedSeconds);
+            if (TickTimer > CommandsFrequency)
+            {
+                TickTimer = TimeSpan.Zero;
+
+                // Every 3 seconds, roll a 3
+                DiceRollerEngine engine = Engine as DiceRollerEngine;
+
+                engine.ProcessCommand(new DiceRollerCommand_RollDice(PlayerID, 3));
+            }
+        }
+    }
 ```
