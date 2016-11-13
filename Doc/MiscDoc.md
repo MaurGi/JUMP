@@ -26,7 +26,9 @@ So we worked with manual tests so far, here are the test cases we tried:
 
 # Features to add
 * Unit test, or at least automation test (with Unity allowing a single window and a single instance this is hard)
-* Support for bots when there are not enough players online (users in a room by himself for too long)
 * Improved reliability and speed with delta compression of Snapshots and list of not-acknowledged Commands.
 * Matchmaking not random but with customizable criteria (SQLLobbies)
 * Source Code comments on public variables and methods?
+
+# Features added
+* (Version 0.3.0) Support for bots when there are not enough players online (users in a room by himself for too long)

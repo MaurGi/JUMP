@@ -1,5 +1,7 @@
 # JUMP (Just Unity Multiplayer with Photon)
 
+### ** NEW: Version 0.3 - now with offline play with bots support! **
+
 **JUMP** is a library that facilitates writing **simple multiplayer games** using **[Unity 3D]** 
 and **[Photon Unity Networking]**.
 
@@ -16,7 +18,7 @@ Out of the box, **JUMP** Provides:
 - Full source code access and great customization.
 
 #### Current Version
-[0.2.0] - 2016-05-05
+[0.3.0] - 2016-11-13 - Adding offline bots support!
 
 For details, see [Changelog](https://raw.githubusercontent.com/MaurGi/JUMP/master/CHANGELOG.md)
 
@@ -25,7 +27,7 @@ For details, see [Changelog](https://raw.githubusercontent.com/MaurGi/JUMP/maste
 * **[How To Install](#how-to-install)**
 * **[Scenario](#scenario)**
 * **[Object Model](#object-model)**
-* **[Offline Bots](#offline-bots)**
+* **[(NEW!!) Offline Bots](#offline-bots)**
 * **[DiceRoller Sample](#diceroller-sample)**
 * **[Testing JUMP](#testing-jump)**
 * **[Features to Add](#features-to-add)**
