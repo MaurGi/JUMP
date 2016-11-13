@@ -22,6 +22,8 @@ namespace JUMP
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("OnMasterDisconnect"));
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("GameServerEngineTypeName"));
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("OnGameRoomConnect"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("BotTypeName"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("OnOfflinePlayConnect"));
                     break;
                 //case JUMPMultiplayer.Stages.MatchmakeLobby:
                 //    EditorGUILayout.PropertyField(serializedObject.FindProperty("OnMatchmakeLobbyDisconnect"));
@@ -32,6 +34,10 @@ namespace JUMP
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("OnPlayConnect"));
                     break;
                 case JUMPMultiplayer.Stages.Play:
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("OnPlayDisconnected"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("OnSnapshotReceived"));
+                    break;
+                case JUMPMultiplayer.Stages.OfflinePlay:
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("OnPlayDisconnected"));
                     EditorGUILayout.PropertyField(serializedObject.FindProperty("OnSnapshotReceived"));
                     break;

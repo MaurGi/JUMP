@@ -11,7 +11,7 @@ namespace JUMP
         /// Called by JUMPServer when all clients have sent the connect command to the server
         /// </summary>
         /// <param name="Players">List of Players participating in the game</param>
-        void StartGame(List<JUMPPlayer> Players);
+        void StartGame(List<IJUMPPlayer> Players);
         void Tick(double ElapsedSeconds);
         void ProcessCommand(JUMPCommand command);
         JUMPCommand CommandFromEvent(byte eventCode, object content);

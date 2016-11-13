@@ -1,11 +1,10 @@
 fileFormatVersion: 2
-guid: fad9b65fb06da4a409416e656f61203d
+guid: d7f20eaa7428d864c9582983399a2f3e
 labels:
 - JumpMultiplayer
-folderAsset: yes
-timeCreated: 1461594232
+timeCreated: 1462970225
 licenseType: Free
-DefaultImporter:
+NativeFormatImporter:
   userData: 
   assetBundleName: 
   assetBundleVariant: 

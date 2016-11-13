@@ -7,8 +7,10 @@ namespace JUMP
     {
         private Text OnlineStatus = null;
 
+#pragma warning disable 0649
         [SerializeField]
         private bool debugMode;
+#pragma warning restore 0649
 
         void Start()
         {
@@ -25,7 +27,7 @@ namespace JUMP
         {
             if (OnlineStatus != null)
             {
-                OnlineStatus.text = JUMPMultiplayer.IsOffline ? "Offline" : "Online";
+                OnlineStatus.text = JUMPMultiplayer.IsPhotonOffline ? "Offline" : "Online";
             }
         }
     }

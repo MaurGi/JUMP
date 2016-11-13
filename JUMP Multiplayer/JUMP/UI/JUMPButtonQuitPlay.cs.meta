@@ -1,5 +1,7 @@
 fileFormatVersion: 2
 guid: 41d1f207df13cb646a43cd933db5869d
+labels:
+- JumpMultiplayer
 timeCreated: 1461594232
 licenseType: Free
 MonoImporter:

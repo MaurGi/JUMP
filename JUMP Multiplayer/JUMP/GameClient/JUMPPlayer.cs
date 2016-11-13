@@ -5,9 +5,20 @@ using System.Text;
 
 namespace JUMP
 {
-    public class JUMPPlayer
+    public interface IJUMPPlayer
     {
-        public int PlayerID;
-        public bool IsConnected = false;
+        int PlayerID { get; set; }
+        bool IsConnected { get; set; }
+    }
+
+    public class JUMPPlayer : IJUMPPlayer
+    {
+        public int PlayerID { get; set; }
+        public bool IsConnected { get; set; }
+
+        public JUMPPlayer()
+        {
+            IsConnected = false;
+        }
     }
 }

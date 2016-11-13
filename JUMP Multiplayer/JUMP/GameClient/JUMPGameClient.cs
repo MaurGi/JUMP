@@ -13,6 +13,13 @@ namespace JUMP
     {
         public event JUMPSnapshotReceivedDelegate OnSnapshotReceived;
 
+        public bool IsOfflinePlayMode { get; private set; }
+
+        JUMPGameClient()
+        {
+            IsOfflinePlayMode = false;
+        }
+
         public void Awake()
         {
             PhotonNetwork.OnEventCall += OnPhotonEventCall;
@@ -24,7 +31,7 @@ namespace JUMP
         }
 
         // receive snapshots from server - you can cast JUMPSnapshotData to your own custom type
-        private void OnPhotonEventCall(byte eventCode, object content, int senderId)
+        public void OnPhotonEventCall(byte eventCode, object content, int senderId)
         {
             if (eventCode == JUMPCommand_Snapshot.JUMPSnapshot_EventCode)
             {
@@ -41,14 +48,24 @@ namespace JUMP
         public void SendCommandToServer(JUMPCommand c)
         {
             RaiseEventOptions options = new RaiseEventOptions();
-            options.Receivers = ExitGames.Client.Photon.ReceiverGroup.MasterClient;
+            options.Receivers = ReceiverGroup.MasterClient;
 
-            PhotonNetwork.RaiseEvent(c.CommandEventCode, c.CommandData, true, options);
+            if (IsOfflinePlayMode)
+            {
+                // There is only one server in the offline scenario, let's call it directly!
+                JUMPMultiplayer.GameServer.OnPhotonEventCall(c.CommandEventCode, c.CommandData, JUMPMultiplayer.PlayerID);
+            }
+            else
+            {
+                // Let's go via networking
+                PhotonNetwork.RaiseEvent(c.CommandEventCode, c.CommandData, true, options);
+            }
         }
 
         // Send a connect command to the server with the photon client id
-        public void ConnectToServer()
+        public void ConnectToServer(bool isOfflinePlayMode)
         {
+            IsOfflinePlayMode = isOfflinePlayMode;
             JUMPCommand_Connect c = new JUMPCommand_Connect(JUMPMultiplayer.PlayerID);
             SendCommandToServer(c);
         }

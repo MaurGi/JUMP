@@ -10,10 +10,18 @@ namespace JUMP
     {
         // Server Engine
         private IJUMPGameServerEngine GameServerEngine;
-        private List<JUMPPlayer> Players;
+        private List<IJUMPPlayer> Players;
+        private List<IJUMPBot> Bots;
 
         private static TimeSpan SnapshotTimer = TimeSpan.Zero;
         private static TimeSpan SnapshotFrequency = TimeSpan.FromMilliseconds(1000 / JUMPOptions.SnapshotsPerSec);
+
+        public bool IsOfflinePlayMode { get; private set; }
+
+        JUMPGameServer()
+        {
+            IsOfflinePlayMode = false;
+        }
 
         public void Awake()
         {
@@ -28,22 +36,26 @@ namespace JUMP
         // Update is called once per frame
         void Update()
         {
-            if (PhotonNetwork.isMasterClient)
+            if (IsOfflinePlayMode || PhotonNetwork.isMasterClient)
             {
                 Tick(Time.deltaTime);
             }
         }
 
         // first you start the server passing the engine
-        public void StartServer(IJUMPGameServerEngine gameServerEngine)
+        public void StartServer(IJUMPGameServerEngine gameServerEngine, List<IJUMPBot> bots, bool isOfflinePlayMode)
         {
-            this.GameServerEngine = gameServerEngine;
-            Players = new List<JUMPPlayer>();
+            GameServerEngine = gameServerEngine;
+            Bots = bots;
+            IsOfflinePlayMode = isOfflinePlayMode;
+            Players = new List<IJUMPPlayer>();
         }
 
         public void Tick(double ElapsedSeconds)
         {
             GameServerEngine.Tick(ElapsedSeconds);
+            Bots.ForEach(x => x.Tick(ElapsedSeconds));
+
             // Is it time for a snapshot?
             SnapshotTimer += TimeSpan.FromSeconds(ElapsedSeconds);
             if (SnapshotTimer > SnapshotFrequency)
@@ -51,21 +63,41 @@ namespace JUMP
                 SnapshotTimer = TimeSpan.Zero;
                 foreach (var player in Players)
                 {
-                    JUMPCommand_Snapshot snap = GameServerEngine.TakeSnapshot(player.PlayerID);
+                    // Bots don't get a snapshot, they have access to the whole engine with the full state of all players and bots
+                    if (!(player is IJUMPBot))
+                    {
+                        JUMPCommand_Snapshot snapCommand = GameServerEngine.TakeSnapshot(player.PlayerID);
 
-                    RaiseEventOptions options = new RaiseEventOptions();
-                    options.TargetActors = new int[1] { snap.ForPlayerID };
-
-                    PhotonNetwork.RaiseEvent(snap.CommandEventCode, snap.CommandData, true, options);
+                        SendEventToClient(snapCommand, player.PlayerID);
+                    }
                 }
             }
         }
 
+        private void SendEventToClient(JUMPCommand_Snapshot commandEvent, int? playerID = null)
+        {
+            if (IsOfflinePlayMode)
+            {
+                JUMPMultiplayer.GameClient.OnPhotonEventCall(commandEvent.CommandEventCode, commandEvent.CommandData, JUMPMultiplayer.PlayerID);
+            }
+            else
+            {
+                RaiseEventOptions options = null;
+                if (playerID.HasValue)
+                {
+                    options = new RaiseEventOptions();
+                    options.TargetActors = new int[1] { playerID.Value };
+                }
+
+                PhotonNetwork.RaiseEvent(commandEvent.CommandEventCode, commandEvent.CommandData, sendReliable: true, options: options);
+            }
+        }
+
         // Server Engine
-        private void OnPhotonEventCall(byte eventCode, object content, int senderId)
+        internal void OnPhotonEventCall(byte eventCode, object content, int senderId)
         {
             // We are the server, hence, we are only processing events for the Master Client
-            if (PhotonNetwork.isMasterClient)
+            if (IsOfflinePlayMode || PhotonNetwork.isMasterClient)
             {
                 if (eventCode == JUMPCommand_Connect.JUMPCommand_Connect_EventCode)
                 {
@@ -77,8 +109,21 @@ namespace JUMP
                     player.IsConnected = true;
                     Players.Add(player);
 
-                    // When all the players are connected, start the game.
+                    int maxPlayerId = player.PlayerID;
+                    // Add bots as players if offline
+                    if (IsOfflinePlayMode)
+                    {
+                        Bots.ForEach(x =>
+                        {
+                            x.PlayerID = ++maxPlayerId;
+                            x.IsConnected = true;
+                            Players.Add(x);
+                        });
+                    }
+
                     int connectedplayers = Players.Count(p => p.IsConnected);
+
+                    // When all the players are connected, start the game.
                     if (connectedplayers == JUMPOptions.NumPlayers)
                     {
                         GameServerEngine.StartGame(Players);
