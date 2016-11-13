@@ -27,13 +27,13 @@ You can very easily have a single play scene that handles online and offline pla
 To facilitate writing engaging Bots, they have full access to the state of the game.
 Bots don't use the snapshot, but get a pointer to your Engine, where you usually store your game state, and a Tick from the server:
 
-```
-    public interface IJUMPBot : IJUMPPlayer
-    {
-        void Tick(double ElapsedSeconds);
+```c#
+public interface IJUMPBot : IJUMPPlayer
+{
+	void Tick(double ElapsedSeconds);
 
-        IJUMPGameServerEngine Engine { get; set; }
-    }
+	IJUMPGameServerEngine Engine { get; set; }
+}
 ```
 
 In the Tick event, you want to access the state on your Engine and have your bots behave accordingly.
