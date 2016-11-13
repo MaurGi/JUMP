@@ -20,6 +20,7 @@ namespace JUMP
         public static int DisconnectTimeout = 10 * 1000;
         public static int SnapshotsPerSec = 3;
         public static LogLevels LogLevel = LogLevels.Error;
+        public static AuthenticationValues CustomAuth = null;
 
         static JUMPOptions()
         {

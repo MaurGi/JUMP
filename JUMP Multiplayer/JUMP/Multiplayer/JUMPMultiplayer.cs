@@ -4,6 +4,7 @@ using UnityEngine.Events;
 using System;
 using System.Collections.Generic;
 using ExitGames.Client.Photon;
+using System.Linq;
 
 namespace JUMP
 {
@@ -17,7 +18,8 @@ namespace JUMP
             Connection,
             Master,
             GameRoom,
-            Play
+            Play,
+            OfflinePlay
         }
 
         public enum QuitReason
@@ -36,9 +38,16 @@ namespace JUMP
             FailedToCreateRoom
         }
 
+        public static JUMPGameClient GameClient { get { return Singleton<JUMPGameClient>.Instance; } }
+        public static void DestroyGameClient() { Singleton<JUMPGameClient>.DestroyInstance(); }
+        public static JUMPGameServer GameServer { get { return Singleton<JUMPGameServer>.Instance; } }
+        public static void DestroyGameServer() { Singleton<JUMPGameServer>.DestroyInstance(); }
+
         public Stages Stage = Stages.Connection;
-        public static bool IsOffline { get { return PhotonNetwork.offlineMode; } }
-        public static bool IsRoomFull {  get { return PhotonNetwork.inRoom ? (PhotonNetwork.room.playerCount == PhotonNetwork.room.maxPlayers) : false; } }
+        [Obsolete("IsOffline is deprecated because confusing. use IsPhotonOffline instead")]
+        public static bool IsOffline { get { return IsPhotonOffline; } }
+        public static bool IsPhotonOffline { get { return PhotonNetwork.offlineMode; } }
+        public static bool IsRoomFull { get { return PhotonNetwork.inRoom ? (PhotonNetwork.room.playerCount == PhotonNetwork.room.maxPlayers) : false; } }
         public static int PlayerID { get { return (PhotonNetwork.player != null) ? (PhotonNetwork.player.ID) : -1; } }
         public MasterDisconnectCause MasterDisconnectReason { get; private set; }
         public DisconnectCause DisconnectReason { get; private set; }
@@ -48,16 +57,18 @@ namespace JUMP
         public UnityEvent OnMasterConnect;
 
         // Master Stage 
-        public static bool IsConnectedToMaster { get { return ((PhotonNetwork.connectionStateDetailed == PeerState.ConnectedToMaster) || (PhotonNetwork.connectionStateDetailed == PeerState.Authenticated)); } }
-        public void Matchmake() { DoMatchmake();  }
+        public static bool IsConnectedToMaster { get { return ((PhotonNetwork.connectionStateDetailed == ClientState.ConnectedToMaster) || (PhotonNetwork.connectionStateDetailed == ClientState.Authenticated)); } }
+        public void Matchmake() { DoMatchmake(); }
         public string GameServerEngineTypeName;
+        public string BotTypeName;
         public UnityEvent OnMasterDisconnect;
         public UnityEvent OnGameRoomConnect;
-
+        public void OfflinePlay() { DoOfflinePlay(); }
+        public UnityEvent OnOfflinePlayConnect;
 
         // GameRoom Stage
-        public static bool IsConnectedToGameRoom { get { return ((PhotonNetwork.connectionStateDetailed == PeerState.Joined)); } }
-        public void CancelGameRoom() { DoCancelGameRoom();  }
+        public static bool IsConnectedToGameRoom { get { return ((PhotonNetwork.connectionStateDetailed == ClientState.Joined)); } }
+        public void CancelGameRoom() { DoCancelGameRoom(); }
         public UnityEvent OnGameRoomDisconnect;
         public UnityEvent OnPlayConnect;
 
@@ -67,11 +78,20 @@ namespace JUMP
         public JUMPSnapshotReceivedUnityEvent OnSnapshotReceived;
         public UnityEvent OnPlayDisconnected;
 
+        // Offline Play Stage
+        public static bool IsOfflinePlayMode { get; private set; }
+        public void QuitOfflinePlay() { DoQuitPlay(QuitReason.WeQuit); }
+
         // PRIVATE variables.
         private bool joinOrCreatingRoom = false;
         private bool cancelingGameRoom = false;
         private bool quittingPlay = false;
         private bool applicationIsQuitting = false;
+
+        static JUMPMultiplayer()
+        {
+            IsOfflinePlayMode = false;
+        }
 
         #region UNITY EVENTS **************************************************
         /// <summary>
@@ -104,11 +124,16 @@ namespace JUMP
                 // In the Connection Stage, we call connect and wait for the connection to complete or fail
                 case Stages.Connection:
                     LogDebug(() => FormatLogMessage("Attempting to connect to Photon Server."));
+                    if (JUMPOptions.CustomAuth != null)
+                    {
+                        LogDebug(() => FormatLogMessage("Adding Custom Authentication."));
+                        PhotonNetwork.AuthValues = JUMPOptions.CustomAuth;
+                    }
                     PhotonNetwork.ConnectUsingSettings(JUMPOptions.GameVersion);
                     break;
                 case Stages.Master:
                     // If we are not connected to Master and we are not online, we should go to the connection stage to connect
-                    if (!IsConnectedToMaster && !IsOffline)
+                    if (!IsConnectedToMaster && !IsPhotonOffline)
                     {
                         LogDebug(() => FormatLogMessage("We are not connected, need to either connect or figure out we are offline."));
                         MasterDisconnectReason = MasterDisconnectCause.NotYetConnected;
@@ -128,7 +153,7 @@ namespace JUMP
                     }
                     break;
                 case Stages.Play:
-                    if (!IsPlayingGame && !IsOffline)
+                    if (!IsPlayingGame && !IsPhotonOffline)
                     {
                         LogDebug(() => FormatLogMessage("We are not in play, need to either connect or figure out we are offline."));
                         RaiseOnPlayDisconnected();
@@ -137,6 +162,18 @@ namespace JUMP
                     {
                         LogDebug(() => FormatLogMessage("We are in the game! Let's fire up the client."));
                         DoStartGameClient();
+                    }
+                    break;
+                case Stages.OfflinePlay:
+                    if (IsOfflinePlayMode)
+                    {
+                        LogDebug(() => FormatLogMessage("We are an offline game! Let's fire up the client."));
+                        DoStartGameClient();
+                    }
+                    else
+                    {
+                        LogDebug(() => FormatLogMessage("We are not in offline play, need to either connect or figure out we are offline."));
+                        RaiseOnPlayDisconnected();
                     }
                     break;
                 default:
@@ -441,9 +478,9 @@ namespace JUMP
                 LogDebug(() => FormatLogMessage("We could not join a room, let's create one and wait for players."));
                 joinOrCreatingRoom = true;
                 RoomOptions opt = new RoomOptions();
-                opt.maxPlayers = JUMPOptions.NumPlayers;
-                opt.isOpen = true;
-                opt.isVisible = true;
+                opt.MaxPlayers = JUMPOptions.NumPlayers;
+                opt.IsOpen = true;
+                opt.IsVisible = true;
                 PhotonNetwork.CreateRoom(null, opt, null);
             }
         }
@@ -671,6 +708,24 @@ namespace JUMP
             }
         }
 
+        private void DoOfflinePlay()
+        {
+            LogInfo(() => FormatLogMessage("JUMP.PlayOffline"));
+
+            if (joinOrCreatingRoom)
+            {
+                LogInfo(() => FormatLogMessage("Already matchmaking, returning "));
+                return;
+            }
+            else
+            {
+                LogDebug(() => FormatLogMessage("Playing offline now."));
+                IsOfflinePlayMode = true;
+                DoStartGameServer();
+                RaiseOnOfflinePlayConnect();
+            }
+        }
+
         private void DoCancelGameRoom()
         {
             LogInfo(() => FormatLogMessage("JUMP.DoCancelGameRoom"));
@@ -681,8 +736,8 @@ namespace JUMP
                 // shut down the server
                 if (PhotonNetwork.isMasterClient)
                 {
-                    Singleton<JUMPGameServer>.Instance.Quit(QuitReason.WeCanceledGameRoom);
-                    Singleton<JUMPGameServer>.DestroyInstance();
+                    GameServer.Quit(QuitReason.WeCanceledGameRoom);
+                    DestroyGameServer();
                 }
 
                 cancelingGameRoom = true;
@@ -707,58 +762,68 @@ namespace JUMP
                 LogDebug(() => FormatLogMessage("The room is not full yet"));
             }
         }
-          
+
         private void DoStartGameServer()
         {
-            LogInfo(() => FormatLogMessage("JUMP.DoStartGameServer"));
+            LogInfo(() => FormatLogMessage("JUMP.DoStartGameServer. Offline:{0}", IsOfflinePlayMode));
 
-            if (!PhotonNetwork.isMasterClient)
+            if (!IsOfflinePlayMode && !PhotonNetwork.isMasterClient)
             {
                 LogError(() => FormatLogMessage("Trying to start a game server not on the master client"));
                 return;
             }
 
-            if (string.IsNullOrEmpty(GameServerEngineTypeName))
-            {
-                LogError(() => FormatLogMessage("Trying to start a game server with a null GameServerEngine object"));
-            }
-            else
-            {
-                LogInfo(() => FormatLogMessage("Starting a game server with Server of class: {0}", GameServerEngineTypeName));
-                Type T = Type.GetType(GameServerEngineTypeName);
-                if (T == null)
-                {
-                    LogError(() => FormatLogMessage("To start a game server you have to set the GameServerEngineTypeName parameter to a valid type name"));
-                    return;
-                }
+            LogInfo(() => FormatLogMessage("Starting a game server with Server of class: {0} and bots of class {1}", GameServerEngineTypeName, BotTypeName));
+            if (!CheckType<IJUMPGameServerEngine>(GameServerEngineTypeName, "GameServerEngineTypeName")) return;
+            if (!CheckType<IJUMPBot>(BotTypeName, "BotTypeName")) return;
 
-                var instance = Activator.CreateInstance(T);
+            // Create the Engine
+            IJUMPGameServerEngine serverEngineInstance = Activator.CreateInstance(Type.GetType(GameServerEngineTypeName)) as IJUMPGameServerEngine;
 
-                if (instance is IJUMPGameServerEngine)
+            List<IJUMPBot> bots = new List<IJUMPBot>();
+            if (IsOfflinePlayMode)
+            {
+                // And create the Bots
+                bots = System.Linq.Enumerable.Repeat(Activator.CreateInstance(Type.GetType(BotTypeName)) as IJUMPBot, JUMPOptions.NumPlayers - 1).ToList();
+                bots.ForEach(x => 
                 {
-                    if (PhotonNetwork.isMasterClient)
-                    {
-                        Singleton<JUMPGameServer>.Instance.StartServer(instance as IJUMPGameServerEngine);
-                    }
-                    else
-                    {
-                        LogError(() => FormatLogMessage("Trying to start a server outside of the Master Client"));
-                    }
-                }
-                else
-                {
-                    LogError(() => FormatLogMessage("To start a game server it has to implement the IJUMPGameServerEngine interface"));
-                }
+                    x.Engine = serverEngineInstance;
+                });
             }
+
+            // Start the server
+            GameServer.StartServer(serverEngineInstance, bots, IsOfflinePlayMode);
+        }
+
+        private bool CheckType<T>(string typeName, string typeVarName)
+        {
+            if (string.IsNullOrEmpty(typeName))
+            {
+                LogError(() => FormatLogMessage("Trying to start a game server with a null {0} object", typeVarName));
+                return false;
+            }
+            Type tp = Type.GetType(typeName);
+            if (tp == null)
+            {
+                LogError(() => FormatLogMessage("To start a game server you have to set the {0} parameter to a valid type name", typeVarName));
+                return false;
+            }
+            if (!(typeof(T).IsAssignableFrom(tp)))
+            {
+                LogError(() => FormatLogMessage("To start a game server or bot, the type {0} in the {1} parameter has to implement the {2} interface", typeName, typeVarName, tp.ToString()));
+                return false;
+            }
+
+            return true;
         }
 
         private void DoStartGameClient()
         {
             LogInfo(() => FormatLogMessage("JUMP.DoStartGameClient"));
 
-            LogInfo(() => FormatLogMessage("Starting a game client"));
-            Singleton<JUMPGameClient>.Instance.OnSnapshotReceived += RaiseOnSnapshotReceived;
-            Singleton<JUMPGameClient>.Instance.ConnectToServer();
+            LogInfo(() => FormatLogMessage("Starting a game client, offline: {0}", IsOfflinePlayMode));
+            GameClient.OnSnapshotReceived += RaiseOnSnapshotReceived;
+            GameClient.ConnectToServer(IsOfflinePlayMode);
         }
 
         private void DoQuitPlay(QuitReason reason)
@@ -768,22 +833,28 @@ namespace JUMP
             QuitGameReason = reason;
 
             // quit client and destroy it
-            Singleton<JUMPGameClient>.Instance.Quit(reason);
-            Singleton<JUMPGameClient>.DestroyInstance();
+            GameClient.Quit(reason);
+            DestroyGameClient();
 
-            if (PhotonNetwork.isMasterClient)
+            if (IsOfflinePlayMode || PhotonNetwork.isMasterClient)
             {
                 // quit server and destroy it
-                Singleton<JUMPGameServer>.Instance.Quit(reason);
-                Singleton<JUMPGameServer>.DestroyInstance();
+                GameServer.Quit(reason);
+                DestroyGameServer();
             }
 
             // leave the room if we are still in there
-            if (PhotonNetwork.inRoom)
+            if (!IsOfflinePlayMode && PhotonNetwork.inRoom)
             {
                 LogDebug(() => FormatLogMessage("Quit play invoked, leaving the room."));
                 quittingPlay = true;
                 PhotonNetwork.LeaveRoom();
+            }
+
+            if (IsOfflinePlayMode)
+            {
+                IsOfflinePlayMode = false;
+                RaiseOnPlayDisconnected();
             }
         }
         #endregion
@@ -830,6 +901,12 @@ namespace JUMP
             LogVerbose(() => FormatLogMessage("JUMP.RaiseOnSnapshotReceived"));
             OnSnapshotReceived.Invoke(snapshot);
         }
+
+        private void RaiseOnOfflinePlayConnect()
+        {
+            LogInfo(() => FormatLogMessage("JUMP.RaiseOnOfflinePlayConnect"));
+            OnOfflinePlayConnect.Invoke();
+        }
         #endregion
 
         #region Logging *****************************************************
@@ -872,7 +949,7 @@ namespace JUMP
         private string FormatLogMessage(string format, params object[] args)
         {
             System.Text.StringBuilder sb = new System.Text.StringBuilder();
-            sb.AppendFormat("JUMP [{0}]({1}/{2}) Stage: {3} - Message: {4}", DateTime.Now.ToString("O"), this.gameObject.scene.name, this.gameObject.name, Stage, string.Format(format, args));
+            sb.AppendFormat("JUMP [{0}]({1}/{2}) Stage: {3} - Message: {4}", DateTime.Now.ToString("O"), SceneManagerHelper.ActiveSceneName, this.gameObject.name, Stage, string.Format(format, args));
             return sb.ToString();
         }
         #endregion

@@ -6,13 +6,15 @@ public class JUMPSceneName : MonoBehaviour
 {
     private Text text;
 
+#pragma warning disable 0649
     [SerializeField]
     private bool debugMode;
+#pragma warning restore 0649
 
     private void Awake()
     {
         text = GetComponent<Text>();
-        text.text = SceneManager.GetActiveScene().name;
+        text.text = SceneManagerHelper.ActiveSceneName;
 
         // Do not show informations when not in editor or debug mode
         if ((!Application.isEditor) && (!debugMode))

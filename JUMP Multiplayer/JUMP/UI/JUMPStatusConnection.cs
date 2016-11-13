@@ -7,8 +7,10 @@ namespace JUMP
     {
         private Text ConnectionStatus = null;
 
+#pragma warning disable 0649
         [SerializeField]
         private bool debugMode;
+#pragma warning restore 0649
 
         void Start()
         {

@@ -1,5 +1,7 @@
 fileFormatVersion: 2
 guid: 04c304b2820ff9b49bdc821f655d3827
+labels:
+- JumpMultiplayer
 folderAsset: yes
 timeCreated: 1461347583
 licenseType: Free

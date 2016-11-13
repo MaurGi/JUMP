@@ -2,7 +2,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-public class JumpButtonStartMatchmaking : MonoBehaviour
+public class JumpButtonStartOfflinePlay : MonoBehaviour
 {
     private Button button;
 
@@ -17,7 +17,7 @@ public class JumpButtonStartMatchmaking : MonoBehaviour
     {
 	    if (button != null)
         {
-            button.interactable = (JUMPMultiplayer.IsConnectedToMaster) && (!JUMPMultiplayer.IsPhotonOffline);
+            button.interactable = (!JUMPMultiplayer.IsConnectedToGameRoom && !JUMPMultiplayer.IsOfflinePlayMode);
         }
 	}
 }
