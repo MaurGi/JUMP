@@ -118,13 +118,13 @@ JUMP Multiplayer with (Semi)Authoritative Server model is based on lots of liter
 ---
 
 ## Object Model
-See **[Object Model](Doc/JUMPObjectModel.md)**
+See **[Object Model](Doc/JUMPObjectModel.md#object-model)**
 
 ## Offline Bots
-See **[Offline Bots](Doc/OfflineBots.md)**
+See **[Offline Bots](Doc/OfflineBots.md#offline-bots)**
 
 ## DiceRoller Sample
-See **[DiceRoller Sample](Doc/DiceRollerSample.md)**
+See **[DiceRoller Sample](Doc/DiceRollerSample.md#diceroller-sample)**
 
 ## Testing JUMP
 See **[Testing JUMP](Doc/MiscDoc.md#testing-jump)**
